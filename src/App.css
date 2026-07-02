@@ -1,0 +1,24 @@
+/* =============================================
+   Zingwangwa LIMS — App wrapper utilities
+   ============================================= */
+
+.lims-app-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Loader overlay for form submissions */
+.form-submitting {
+  opacity: .6;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+
+/* Smooth card stack for queue wrappers */
+.queue-wrapper-card {
+  transition: transform .2s ease;
+}
+.queue-wrapper-card:last-child {
+  margin-bottom: 0;
+}
