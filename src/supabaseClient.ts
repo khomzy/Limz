@@ -176,23 +176,25 @@ export const LimsDbService = {
   async login(email: string, password: string): Promise<UserSession> {
     const formattedEmail = email.toLowerCase().trim();
 
-    // Check predefined hardcoded credentials
+    let demoSession: UserSession | null = null;
+
+    // Check predefined hardcoded credentials for demo metadata mapping
     if (formattedEmail === 'moghajoh@gmail.com' && password === 'ruth11') {
-      return {
+      demoSession = {
         email: formattedEmail,
         role: 'lab',
         name: 'John Mogha',
         facility: 'Zingwangwa Lab'
       };
     } else if (formattedEmail === 'clinitian@zg.com' && password === '12345678') {
-      return {
+      demoSession = {
         email: formattedEmail,
         role: 'clinician',
         name: 'General Clinician',
         facility: 'Zingwangwa Community Hospital'
       };
     } else if (formattedEmail === 'tb@zg.com' && password === '12345678') {
-      return {
+      demoSession = {
         email: formattedEmail,
         role: 'tb',
         name: 'TB Department',
@@ -201,14 +203,33 @@ export const LimsDbService = {
     }
 
     if (useRealSupabase && supabase) {
-      // Attempt real Supabase Auth
+      // Attempt real Supabase Auth - this is REQUIRED to establish a session for RLS policies
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formattedEmail,
         password
       });
-      if (error) throw new Error(error.message);
+
+      if (error) {
+        // If we have a demo session but Supabase fails, it might be because the user hasn't created the demo accounts in Supabase yet.
+        // However, RLS will fail if we don't have a session.
+        if (demoSession) {
+          console.warn('Supabase Auth failed for demo account. RLS policies may block database access.', error.message);
+          return demoSession;
+        }
+        throw new Error(error.message);
+      }
+
       if (data.user) {
-        // Map role based on metadata or email
+        // If it's a demo account, use the demo metadata but prefer actual user_metadata if present
+        if (demoSession) {
+          return {
+            ...demoSession,
+            name: data.user.user_metadata?.full_name || demoSession.name,
+            facility: data.user.user_metadata?.facility || demoSession.facility
+          };
+        }
+
+        // Map role for other users based on metadata or email
         let role: UserRole = 'clinician';
         if (formattedEmail.includes('lab') || formattedEmail === 'moghajoh@gmail.com') {
           role = 'lab';
@@ -223,6 +244,11 @@ export const LimsDbService = {
           facility: data.user.user_metadata?.facility || 'Zingwangwa Hospital'
         };
       }
+    }
+
+    // Fallback for local storage mode
+    if (demoSession) {
+      return demoSession;
     }
 
     throw new Error('Invalid email or password. Please use the preconfigured hospital login credentials.');
