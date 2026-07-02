@@ -6,5 +6,5 @@ export default defineConfig({
   plugins: [react()],
   // GitHub Pages URL:
   // https://khomzy.github.io/Limz/
-  base: '/Limz/',
+  base: '/',
 })
