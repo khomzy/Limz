@@ -16,11 +16,13 @@ Create a local `.env` file (never commit it):
 ```text
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
+# Optional: lets staff enter a short username instead of a full work email.
+VITE_MEDICY_USERNAME_DOMAIN=accounts.example.org
 ```
 
 The frontend must receive only a Supabase publishable/anon key. Service-role, secret and Africa's Talking credentials belong in protected server-side configuration.
 
-Without Supabase variables, the app starts in local demonstration mode. Demo facility ID is `ZCH001`; the supported username aliases are `lab`, `tb`, `hiv` and `clinician`. Demo passwords remain in `src/supabaseClient.ts` and must not be treated as production credentials.
+Without Supabase variables, the public website remains available but secure application login is disabled. No patient records or login credentials are embedded in the frontend.
 
 ## Supabase setup
 
