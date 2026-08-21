@@ -1,41 +1,50 @@
 import { useState, useEffect, useRef } from 'react';
-import type { LimsRequest, UserSession, TbResults, HivResults } from './types';
+import type { LimsRequest, UserSession, TestType } from './types';
 import { LimsDbService, supabase } from './supabaseClient';
 import TBRequestForm from './components/TBRequestForm';
 import HIVRequestForm from './components/HIVRequestForm';
+import HaematologyRequestForm from './components/HaematologyRequestForm';
+import ChemistryRequestForm from './components/ChemistryRequestForm';
 import ResultEntryForm from './components/ResultEntryForm';
 import SmsSimulator from './components/SmsSimulator';
 import TestTypeModal from './components/TestTypeModal';
+import LabEquipmentDashboard from './components/LabEquipmentDashboard';
+import PublicSite from './components/PublicSite';
 import {
   LogOut,
   Plus,
   FileText,
   FlaskConical,
-  Activity,
   CheckCircle2,
   ClipboardList,
   Search,
-  AlertCircle,
-  Microscope,
-  HeartPulse,
   Clock,
   Inbox,
+  Printer,
+  Cpu
 } from 'lucide-react';
 import './App.css';
 
 export default function App() {
   const [session, setSession]           = useState<UserSession | null>(null);
-  const [emailInput, setEmailInput]     = useState('');
+  const [showLogin, setShowLogin]       = useState(false);
+  const [facilityIdInput, setFacilityIdInput] = useState('');
+  const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [rememberMe, setRememberMe]     = useState(false);
   const [loginError, setLoginError]     = useState('');
   const [loading, setLoading]           = useState(false);
 
   const [requests, setRequests]                   = useState<LimsRequest[]>([]);
   const [searchQuery, setSearchQuery]             = useState('');
-  const [activeForm, setActiveForm]               = useState<'none'|'tb-request'|'hiv-request'|'result-entry'>('none');
+  const [activeForm, setActiveForm]               = useState<'none'|'tb-request'|'hiv-request'|'haematology-request'|'chemistry-request'|'result-entry'>('none');
   const [selectedRequest, setSelectedRequest]     = useState<LimsRequest | null>(null);
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
   const [showTestTypeModal, setShowTestTypeModal] = useState(false);
+  const [showEquipmentHub, setShowEquipmentHub]   = useState(false);
+
+  // Department filter for lab queue
+  const [activeDeptFilter, setActiveDeptFilter] = useState<'All' | 'Molecular' | 'Haematology' | 'Chemistry'>('All');
 
   const [smsDetails, setSmsDetails] = useState<{ to: string; patientName: string; text: string } | null>(null);
 
@@ -55,7 +64,7 @@ export default function App() {
   const loadRequests = async (userSession: UserSession) => {
     try {
       setLoading(true);
-      const data = await LimsDbService.getRequests(userSession.role, userSession.email);
+      const data = await LimsDbService.getRequests(userSession);
       setRequests(data);
     } catch (err: any) {
       console.error('Error loading requests:', err.message);
@@ -81,25 +90,46 @@ export default function App() {
   }, [session?.email]);
 
   // ── Auth ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    let active = true;
+    LimsDbService.restoreSession()
+      .then(restored => {
+        if (!active || !restored) return;
+        setSession(restored);
+        loadRequests(restored);
+      })
+      .catch(error => console.warn('Stored Medicy session could not be restored:', error));
+    return () => { active = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     try {
-      const userSession = await LimsDbService.login(emailInput, passwordInput);
+      setLoading(true);
+      const userSession = await LimsDbService.login(facilityIdInput, usernameInput, passwordInput, rememberMe);
       setSession(userSession);
-      loadRequests(userSession);
+      setShowLogin(false);
+      await loadRequests(userSession);
     } catch (err: any) {
       setLoginError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await LimsDbService.logout();
     setSession(null);
     setRequests([]);
-    setEmailInput('');
+    setFacilityIdInput('');
+    setUsernameInput('');
     setPasswordInput('');
+    setRememberMe(false);
     setActiveForm('none');
     setSelectedRequest(null);
+    setShowEquipmentHub(false);
   };
 
   // ── Clinician actions ─────────────────────────────────────────────────────
@@ -110,8 +140,22 @@ export default function App() {
     if (!session) return;
     try {
       setLoading(true);
-      const testType = session.role === 'tb' ? 'TB' : 'HIV';
-      await LimsDbService.createRequest(testType, subType, session.email, patientName, patientId, phone, patientDetails, requestDetails, sampleDetails);
+      let testType: TestType = 'TB';
+      if (activeForm === 'hiv-request') testType = 'HIV';
+      else if (activeForm === 'haematology-request') testType = 'Haematology';
+      else if (activeForm === 'chemistry-request') testType = 'Chemistry';
+
+      const isAllowed = session.role === 'lab'
+        || (session.role === 'tb' && testType === 'TB')
+        || (session.role === 'hiv' && testType === 'HIV')
+        || (session.role === 'clinician' && (testType === 'Haematology' || testType === 'Chemistry'));
+      if (!isAllowed) throw new Error('This test workflow is not available for your assigned role.');
+
+      await LimsDbService.createRequest(
+        testType, subType, session.email, patientName, patientId, phone,
+        patientDetails, requestDetails, sampleDetails, session
+      );
+
       setActiveForm('none');
       loadRequests(session);
     } catch (err: any) {
@@ -141,7 +185,7 @@ export default function App() {
     setActiveForm('result-entry');
   };
 
-  const handleResultSubmit = async (results: TbResults | HivResults) => {
+  const handleResultSubmit = async (results: any) => {
     if (!session || !selectedRequest) return;
     try {
       setLoading(true);
@@ -156,13 +200,20 @@ export default function App() {
     }
   };
 
-  // ── Derived data ──────────────────────────────────────────────────────────
+  // ── Derived data filters ──────────────────────────────────────────────────
   const filteredRequests = requests.filter(r => {
+    // 1. Department filter
+    if (session?.role === 'lab' && activeDeptFilter !== 'All') {
+      if (r.department !== activeDeptFilter) return false;
+    }
+
+    // 2. Search query filter
     const q = searchQuery.toLowerCase().trim();
     return !q || r.patient_name.toLowerCase().includes(q) ||
       (r.patient_id && r.patient_id.toLowerCase().includes(q)) ||
       r.status.toLowerCase().includes(q) ||
-      r.sub_type.toLowerCase().includes(q);
+      r.sub_type.toLowerCase().includes(q) ||
+      r.type.toLowerCase().includes(q);
   });
 
   const statTotal     = requests.length;
@@ -170,97 +221,44 @@ export default function App() {
   const statTesting   = requests.filter(r => r.status === 'Testing' || r.status === 'Sample Received').length;
   const statCompleted = requests.filter(r => r.status === 'Completed').length;
 
-  // ── Initials helper ───────────────────────────────────────────────────────
   const initials = (name: string) =>
     name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  // ── LOGIN PAGE ────────────────────────────────────────────────────────────
+  const handleNewRequest = () => {
+    if (!session) return;
+    if (session.role === 'tb') setActiveForm('tb-request');
+    else if (session.role === 'hiv') setActiveForm('hiv-request');
+    else setShowTestTypeModal(true);
+  };
+
+  const roleLabel = session?.role === 'lab' ? 'Laboratory'
+    : session?.role === 'tb' ? 'TB programme'
+    : session?.role === 'hiv' ? 'HIV programme'
+    : 'Clinical';
+  const dashboardTitle = session?.role === 'tb' ? 'TB diagnostic workflow'
+    : session?.role === 'hiv' ? 'HIV viral load & EID workflow'
+    : session?.role === 'lab' ? 'Laboratory operations'
+    : 'Clinical diagnostics';
+
+  // ── PUBLIC WEBSITE / LOGIN ─────────────────────────────────────────────────
   if (!session) {
     return (
-      <div className="login-container">
-        <div className="login-orb login-orb-1" />
-        <div className="login-orb login-orb-2" />
-        <div className="login-orb login-orb-3" />
-        <div className="login-grid" />
-
-        <div className="login-card fade-in">
-          <div className="login-logo">
-            <div className="login-logo-icon">🔬</div>
-            <h1>Zingwangwa <span>LIMS</span></h1>
-          </div>
-          <span className="login-subtitle">
-            Lab Information Management System · Zingwangwa Community Hospital
-          </span>
-
-          {loginError && (
-            <div className="login-error-msg">
-              <AlertCircle size={15} />
-              {loginError}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="login-form">
-            <div className="input-group">
-              <label>Hospital Email Address</label>
-              <input
-                type="email"
-                id="login-email"
-                placeholder="e.g. clinitian@zg.com"
-                value={emailInput}
-                onChange={e => setEmailInput(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
-
-            <div className="input-group">
-              <label>Security Password</label>
-              <input
-                type="password"
-                id="login-password"
-                placeholder="Enter your password"
-                value={passwordInput}
-                onChange={e => setPasswordInput(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            <button type="submit" className="login-submit-btn" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign In to Dashboard'}
-            </button>
-          </form>
-
-          {/* Quick-fill demo logins */}
-          <div className="seed-logins-box">
-            <h4>Quick Demonstration Logins</h4>
-            <div className="seed-login-item">
-              <span className="role-label">
-                <HeartPulse size={14} style={{color:'#14b8a6'}} />
-                General Clinician
-                <em>clinitian@zg.com</em>
-              </span>
-              <button id="fill-clinician" onClick={() => { setEmailInput('clinitian@zg.com'); setPasswordInput('12345678'); }}>Fill</button>
-            </div>
-            <div className="seed-login-item">
-              <span className="role-label">
-                <Activity size={14} style={{color:'#10b981'}} />
-                TB Clinician
-                <em>tb@zg.com</em>
-              </span>
-              <button id="fill-tb" onClick={() => { setEmailInput('tb@zg.com'); setPasswordInput('12345678'); }}>Fill</button>
-            </div>
-            <div className="seed-login-item">
-              <span className="role-label">
-                <Microscope size={14} style={{color:'#3b82f6'}} />
-                Laboratory Tech
-                <em>moghajoh@gmail.com</em>
-              </span>
-              <button id="fill-lab" onClick={() => { setEmailInput('moghajoh@gmail.com'); setPasswordInput('ruth11'); }}>Fill</button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PublicSite
+        showLogin={showLogin}
+        facilityId={facilityIdInput}
+        username={usernameInput}
+        password={passwordInput}
+        rememberMe={rememberMe}
+        loading={loading}
+        loginError={loginError}
+        onShowLogin={() => { setLoginError(''); setShowLogin(true); }}
+        onHideLogin={() => setShowLogin(false)}
+        onFacilityIdChange={setFacilityIdInput}
+        onUsernameChange={setUsernameInput}
+        onPasswordChange={setPasswordInput}
+        onRememberMeChange={setRememberMe}
+        onLogin={handleLogin}
+      />
     );
   }
 
@@ -268,18 +266,29 @@ export default function App() {
   return (
     <div className="lims-app-wrapper">
 
-      {/* ─── Navbar ─────────────────────────────────────────────────── */}
+      {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-brand">
           <div className="navbar-logo-mark">🔬</div>
           <div className="navbar-brand-text">
-            <span className="brand-name">Zingwangwa Hospital LIMS</span>
-            <span className="brand-sub">Diagnostic Information System</span>
+            <span className="brand-name">Medicy</span>
+            <span className="brand-sub">{session.facility}</span>
           </div>
-          <span className="brand-badge">{session.role} portal</span>
+          <span className="brand-badge">{roleLabel}</span>
         </div>
 
         <div className="navbar-right">
+          {session.role === 'lab' && (
+            <button
+              className="btn-secondary"
+              onClick={() => setShowEquipmentHub(!showEquipmentHub)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, border: showEquipmentHub ? '1px solid #3b82f6' : undefined }}
+            >
+              <Cpu size={14} />
+              {showEquipmentHub ? 'View Queue' : 'Equipment Connect'}
+            </button>
+          )}
+
           <div className="user-chip">
             <div className="user-avatar">{initials(session.name)}</div>
             <div className="user-info-block">
@@ -296,23 +305,33 @@ export default function App() {
 
       <div className="dashboard-container">
 
-        {/* ─── Test type picker modal ──────────────────────────── */}
+        {/* Test type picker modal */}
         {showTestTypeModal && (
           <TestTypeModal
+            allowedTypes={session.role === 'clinician' ? ['Haematology', 'Chemistry'] : undefined}
             onSelect={(type) => {
               setShowTestTypeModal(false);
-              setActiveForm(type === 'TB' ? 'tb-request' : 'hiv-request');
+              if (type === 'TB') setActiveForm('tb-request');
+              else if (type === 'HIV') setActiveForm('hiv-request');
+              else if (type === 'Haematology') setActiveForm('haematology-request');
+              else if (type === 'Chemistry') setActiveForm('chemistry-request');
             }}
             onClose={() => setShowTestTypeModal(false)}
           />
         )}
 
-      {/* ─── Overlay forms ──────────────────────────────────────── */}
+        {/* Overlay forms */}
         {activeForm === 'tb-request' && (
-          <TBRequestForm onSubmit={handleRequestSubmit} onCancel={() => setActiveForm('none')} />
+          <TBRequestForm facility={session.facility} onSubmit={handleRequestSubmit} onCancel={() => setActiveForm('none')} />
         )}
         {activeForm === 'hiv-request' && (
-          <HIVRequestForm onSubmit={handleRequestSubmit} onCancel={() => setActiveForm('none')} />
+          <HIVRequestForm facility={session.facility} onSubmit={handleRequestSubmit} onCancel={() => setActiveForm('none')} />
+        )}
+        {activeForm === 'haematology-request' && (
+          <HaematologyRequestForm facility={session.facility} onSubmit={handleRequestSubmit} onCancel={() => setActiveForm('none')} />
+        )}
+        {activeForm === 'chemistry-request' && (
+          <ChemistryRequestForm facility={session.facility} onSubmit={handleRequestSubmit} onCancel={() => setActiveForm('none')} />
         )}
         {activeForm === 'result-entry' && selectedRequest && (
           <ResultEntryForm
@@ -322,312 +341,404 @@ export default function App() {
           />
         )}
 
-        {/* ─── Main dashboard view ────────────────────────────────── */}
+        {/* Main dashboard view */}
         {activeForm === 'none' && (
           <div className="dashboard-main fade-in">
 
             {/* Hero header */}
             <div className="dashboard-hero">
               <div className="dashboard-hero-text">
-                <h1>Zingwangwa Diagnostics Portal</h1>
-                <p>Welcome back, <strong>{session.name}</strong>. Real-time lab connectivity.</p>
+                <h1>{dashboardTitle}</h1>
+                <p>Welcome, <strong>{session.name}</strong>. {session.facility} diagnostic records are ready.</p>
               </div>
 
               <div className="action-grid">
                 {session.role === 'lab' ? (
-                  <button id="register-case" className="btn-primary" onClick={() => setShowTestTypeModal(true)}>
+                  <button id="register-case" className="btn-primary" onClick={handleNewRequest}>
                     <Plus size={16} />
                     Register New Case
                   </button>
-                ) : session.role === 'tb' ? (
-                  <button id="new-tb-request" className="btn-primary tb-theme" onClick={() => setShowTestTypeModal(true)}>
-                    <Plus size={16} />
-                    Request TB Test
-                  </button>
                 ) : (
-                  <button id="new-hiv-request" className="btn-primary hiv-theme" onClick={() => setShowTestTypeModal(true)}>
+                  <button id="new-request" className="btn-primary" onClick={handleNewRequest}>
                     <Plus size={16} />
-                    Request HIV VL / EID
+                    {session.role === 'tb' ? 'Request TB Test' : session.role === 'hiv' ? 'Request HIV VL / EID' : 'Order Diagnostics'}
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Stats grid */}
-            <div className="stats-grid stagger">
-              <div className="stat-card total fade-in">
-                <div className="stat-icon"><ClipboardList size={22} /></div>
-                <div className="stat-body">
-                  <span className="label">Total Records</span>
-                  <span className="value">{statTotal}</span>
-                </div>
-              </div>
-              <div className="stat-card pending fade-in">
-                <div className="stat-icon"><Clock size={22} /></div>
-                <div className="stat-body">
-                  <span className="label">Pending Samples</span>
-                  <span className="value">{statPending}</span>
-                </div>
-              </div>
-              <div className="stat-card active fade-in">
-                <div className="stat-icon"><FlaskConical size={22} /></div>
-                <div className="stat-body">
-                  <span className="label">Active Analysis</span>
-                  <span className="value">{statTesting}</span>
-                </div>
-              </div>
-              <div className="stat-card done fade-in">
-                <div className="stat-icon"><CheckCircle2 size={22} /></div>
-                <div className="stat-body">
-                  <span className="label">Results Delivered</span>
-                  <span className="value">{statCompleted}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Queue header */}
-            <div className="queue-header-row">
-              <h3>
-                Diagnostic Registry &amp; Queue
-                {filteredRequests.length > 0 && (
-                  <span style={{ fontWeight: 400, fontSize: '.85rem', color: 'var(--cli-text-muted)', marginLeft: 10 }}>
-                    {filteredRequests.length} record{filteredRequests.length !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </h3>
-              <div className="search-box">
-                <span className="search-icon"><Search size={15} /></span>
-                <input
-                  id="queue-search"
-                  type="text"
-                  placeholder="Patient, ID, test type, status…"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Queue list */}
-            {loading ? (
-              <div className="global-loader-box">
-                <div className="loader-spinner" />
-                <span>Loading registry records…</span>
-              </div>
-            ) : filteredRequests.length === 0 ? (
-              <div className="empty-state fade-in">
-                <div className="empty-state-icon">
-                  <Inbox size={34} />
-                </div>
-                <h3>{searchQuery ? 'No matching records found' : 'No diagnostic requests yet'}</h3>
-                <p>
-                  {searchQuery
-                    ? 'Try adjusting your search query or clearing the filter.'
-                    : 'Submit a new TB or HIV test request to get started.'}
-                </p>
-                {!searchQuery && session.role !== 'lab' && (
-                  <button
-                    className={`btn-primary ${session.role === 'tb' ? 'tb-theme' : 'hiv-theme'}`}
-                    style={{ marginTop: 8 }}
-                    onClick={() => setActiveForm(session.role === 'tb' ? 'tb-request' : 'hiv-request')}
-                  >
-                    <Plus size={15} />
-                    Create First Request
-                  </button>
-                )}
-              </div>
+            {/* Equipment Hub View Mode */}
+            {session.role === 'lab' && showEquipmentHub ? (
+              <LabEquipmentDashboard requests={requests} />
             ) : (
-              <div className="queue-list">
-                {filteredRequests.map(req => {
-                  const isCompleted = req.status === 'Completed';
-                  const isExpanded  = expandedRequestId === req.id;
+              <>
+                {/* Stats grid */}
+                <div className="stats-grid stagger">
+                  <div className="stat-card total fade-in">
+                    <div className="stat-icon"><ClipboardList size={22} /></div>
+                    <div className="stat-body">
+                      <span className="label">Total Records</span>
+                      <span className="value">{statTotal}</span>
+                    </div>
+                  </div>
+                  <div className="stat-card pending fade-in">
+                    <div className="stat-icon"><Clock size={22} /></div>
+                    <div className="stat-body">
+                      <span className="label">Pending Samples</span>
+                      <span className="value">{statPending}</span>
+                    </div>
+                  </div>
+                  <div className="stat-card active fade-in">
+                    <div className="stat-icon"><FlaskConical size={22} /></div>
+                    <div className="stat-body">
+                      <span className="label">Active Analysis</span>
+                      <span className="value">{statTesting}</span>
+                    </div>
+                  </div>
+                  <div className="stat-card done fade-in">
+                    <div className="stat-icon"><CheckCircle2 size={22} /></div>
+                    <div className="stat-body">
+                      <span className="label">Results Delivered</span>
+                      <span className="value">{statCompleted}</span>
+                    </div>
+                  </div>
+                </div>
 
-                  return (
-                    <div key={req.id} className="queue-wrapper-card">
-                      <div className={`queue-card type-${req.type}`}>
-                        <div className="card-left">
-                          <div className={`test-badge-type ${req.type}`}>{req.type}</div>
-                          <div className="patient-info-summary">
-                            <h4>{req.patient_name}</h4>
-                            <div className="meta-row">
-                              <span className="meta-item">ID: <strong>{req.patient_id || 'N/A'}</strong></span>
-                              <span className="meta-dot" />
-                              <span className="meta-item">Test: <strong>{req.sub_type}</strong></span>
-                              <span className="meta-dot" />
-                              <span className="meta-item">
-                                <strong>{new Date(req.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}</strong>
+                {/* Department filter tabs (Lab role only) */}
+                {session.role === 'lab' && (
+                  <div className="dept-filter-tabs">
+                    {(['All', 'Molecular', 'Haematology', 'Chemistry'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        className={`dept-tab-btn ${activeDeptFilter === tab ? 'active' : ''}`}
+                        onClick={() => setActiveDeptFilter(tab)}
+                      >
+                        {tab === 'Molecular' ? '🧬 Molecular' : tab === 'Haematology' ? '🩸 Haematology' : tab === 'Chemistry' ? '⚗️ Chemistry' : '🌍 All'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Queue header */}
+                <div className="queue-header-row">
+                  <h3>
+                    Diagnostic Registry &amp; Queue
+                    {filteredRequests.length > 0 && (
+                      <span style={{ fontWeight: 400, fontSize: '.85rem', color: 'var(--cli-text-muted)', marginLeft: 10 }}>
+                        {filteredRequests.length} record{filteredRequests.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </h3>
+                  <div className="search-box">
+                    <span className="search-icon"><Search size={15} /></span>
+                    <input
+                      id="queue-search"
+                      type="text"
+                      placeholder="Patient, ID, test type, status…"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Queue list */}
+                {loading ? (
+                  <div className="global-loader-box">
+                    <div className="loader-spinner" />
+                    <span>Loading registry records…</span>
+                  </div>
+                ) : filteredRequests.length === 0 ? (
+                  <div className="empty-state fade-in">
+                    <div className="empty-state-icon">
+                      <Inbox size={34} />
+                    </div>
+                    <h3>{searchQuery ? 'No matching records found' : 'No diagnostic requests yet'}</h3>
+                    <p>
+                      {searchQuery
+                        ? 'Try adjusting your search query or clearing the filter.'
+                        : 'Submit a new test request to get started.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="queue-list">
+                    {filteredRequests.map(req => {
+                      const isCompleted = req.status === 'Completed';
+                      const isExpanded  = expandedRequestId === req.id;
+
+                      return (
+                        <div key={req.id} className="queue-wrapper-card">
+                          <div className={`queue-card type-${req.type}`}>
+                            <div className="card-left">
+                              <div className={`test-badge-type ${req.type}`}>{req.type === 'Haematology' ? 'HAEM' : req.type === 'Chemistry' ? 'CHEM' : req.type}</div>
+                              <div className="patient-info-summary">
+                                <h4>{req.patient_name}</h4>
+                                <div className="meta-row">
+                                  <span className="meta-item">ID: <strong>{req.patient_id || 'N/A'}</strong></span>
+                                  <span className="meta-dot" />
+                                  <span className="meta-item">Test: <strong>{req.sub_type}</strong></span>
+                                  <span className="meta-dot" />
+                                  <span className="meta-item">
+                                    <strong>{new Date(req.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}</strong>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="card-right">
+                              <span className={`status-indicator ${req.status.replace(/ /g, '-')}`}>
+                                {req.status}
                               </span>
-                            </div>
-                          </div>
-                        </div>
 
-                        <div className="card-right">
-                          <span className={`status-indicator ${req.status.replace(/ /g, '-')}`}>
-                            {req.status}
-                          </span>
-
-                          {session.role === 'lab' ? (
-                            <div className="lab-action-group">
-                              {req.status === 'Pending Sample' && (
-                                <button id={`receive-${req.id}`} className="btn-action-small receive" onClick={() => handleReceiveSample(req.id)}>
-                                  Receive Sample
-                                </button>
-                              )}
-                              {req.status === 'Sample Received' && (
-                                <button id={`start-test-${req.id}`} className="btn-action-small test" onClick={() => handleStartTesting(req.id)}>
-                                  Start Test
-                                </button>
-                              )}
-                              {req.status === 'Testing' && (
-                                <button id={`upload-${req.id}`} className="btn-action-small results" onClick={() => handleOpenResultsForm(req)}>
-                                  Upload Results
-                                </button>
-                              )}
-                              {isCompleted && (
-                                <button id={`view-lab-${req.id}`} className="btn-action-small view" onClick={() => setExpandedRequestId(isExpanded ? null : req.id)}>
-                                  {isExpanded ? 'Hide' : 'View Results'}
-                                </button>
-                              )}
-                            </div>
-                          ) : (
-                            isCompleted && (
-                              <button id={`view-cli-${req.id}`} className="btn-action-small view" onClick={() => setExpandedRequestId(isExpanded ? null : req.id)}>
-                                {isExpanded ? 'Hide' : 'Check Results'}
-                              </button>
-                            )
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Expandable results panel */}
-                      {isCompleted && isExpanded && (
-                        <div className="results-preview-card">
-                          <div className="rp-header">
-                            <FileText size={16} />
-                            Laboratory Diagnostic Report
-                          </div>
-
-                          {req.type === 'TB' ? (
-                            <div className="preview-grid">
-                              <div className="preview-item">
-                                <label>Lab Serial No.</label>
-                                <span>{req.results.labSerialNumber}</span>
-                              </div>
-                              <div className="preview-item">
-                                <label>Macroscopic Appearance</label>
-                                <span>{req.results.macroscopicExamination}</span>
-                              </div>
-
-                              {req.results.geneXpertResult && (
-                                <div className="preview-item">
-                                  <label>GeneXpert Ultra Result</label>
-                                  <span className={req.results.geneXpertResult?.includes('detected') && !req.results.geneXpertResult?.includes('not') ? 'alert-pos' : 'alert-neg'}>
-                                    {req.results.geneXpertResult}
-                                  </span>
-                                </div>
-                              )}
-
-                              {req.results.microscopySamples?.[0]?.result && req.results.microscopySamples[0].result !== 'Not Done' && (
-                                <div className="preview-item">
-                                  <label>ZN Microscopy Smear 1</label>
-                                  <span className={req.results.microscopySamples[0].result === 'Positive' ? 'alert-pos' : 'alert-neg'}>
-                                    {req.results.microscopySamples[0].result}
-                                    {req.results.microscopySamples[0].grading && ` (${req.results.microscopySamples[0].grading})`}
-                                  </span>
-                                </div>
-                              )}
-
-                              {req.results.urineLamResult && req.results.urineLamResult !== 'Not Done' && (
-                                <div className="preview-item">
-                                  <label>Urine LAM Result</label>
-                                  <span className={req.results.urineLamResult === 'Positive' ? 'alert-pos' : 'alert-neg'}>
-                                    {req.results.urineLamResult}
-                                  </span>
-                                </div>
-                              )}
-
-                              {req.results.reflexResults && (
-                                <div className="preview-item" style={{ gridColumn: '1/-1' }}>
-                                  <label>Reflex XDR Drug Resistance Panel</label>
-                                  <div style={{ marginTop: 6 }}>
-                                    {req.results.reflexResults.map((ref: any, i: number) => (
-                                      <span key={i} className={`drug-tag ${ref.result === 'Resistant' ? 'resistant' : 'sensitive'}`}>
-                                        {ref.drug}: {ref.result}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="preview-item" style={{ gridColumn: '1/-1' }}>
-                                <label>Clinical Comments</label>
-                                <span>{req.results.comment || '—'}</span>
-                              </div>
-                              <div className="preview-item">
-                                <label>Reviewed By</label>
-                                <span>{req.results.reviewedBy}</span>
-                              </div>
-                              <div className="preview-item">
-                                <label>Report Signed</label>
-                                <span>{req.results.reviewedDate ? new Date(req.results.reviewedDate).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—'}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="preview-grid">
-                              <div className="preview-item">
-                                <label>Lab Serial No.</label>
-                                <span>{req.results.labSerialNumber}</span>
-                              </div>
-                              <div className="preview-item">
-                                <label>Date Processed</label>
-                                <span>{req.results.dateProcessed ? new Date(req.results.dateProcessed).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—'}</span>
-                              </div>
-
-                              {req.sub_type === 'EID' ? (
-                                <div className="preview-item">
-                                  <label>Infant DNA-PCR Result</label>
-                                  <span className={req.results.eidDnaPcrResult === 'Positive' ? 'alert-pos' : 'alert-neg'}>
-                                    {req.results.eidDnaPcrResult}
-                                  </span>
+                              {session.role === 'lab' ? (
+                                <div className="lab-action-group">
+                                  {req.status === 'Pending Sample' && (
+                                    <button id={`receive-${req.id}`} className="btn-action-small receive" onClick={() => handleReceiveSample(req.id)}>
+                                      Receive Sample
+                                    </button>
+                                  )}
+                                  {req.status === 'Sample Received' && (
+                                    <button id={`start-test-${req.id}`} className="btn-action-small test" onClick={() => handleStartTesting(req.id)}>
+                                      Start Test
+                                    </button>
+                                  )}
+                                  {req.status === 'Testing' && (
+                                    <button id={`upload-${req.id}`} className="btn-action-small results" onClick={() => handleOpenResultsForm(req)}>
+                                      Upload Results
+                                    </button>
+                                  )}
+                                  {isCompleted && (
+                                    <button id={`view-lab-${req.id}`} className="btn-action-small view" onClick={() => setExpandedRequestId(isExpanded ? null : req.id)}>
+                                      {isExpanded ? 'Hide' : 'View Results'}
+                                    </button>
+                                  )}
                                 </div>
                               ) : (
-                                <>
+                                isCompleted && (
+                                  <button id={`view-cli-${req.id}`} className="btn-action-small view" onClick={() => setExpandedRequestId(isExpanded ? null : req.id)}>
+                                    {isExpanded ? 'Hide' : 'Check Results'}
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Expandable results panel */}
+                          {isCompleted && isExpanded && (
+                            <div className="results-preview-card">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid var(--cli-border)', paddingBottom: 12 }}>
+                                <div className="rp-header" style={{ border: 'none', margin: 0, padding: 0 }}>
+                                  <FileText size={16} />
+                                  Medicy Laboratory Diagnostic Report
+                                </div>
+                                <button
+                                  className="btn-secondary"
+                                  onClick={() => window.print()}
+                                  style={{ padding: '6px 12px', fontSize: '.78rem', display: 'flex', alignItems: 'center', gap: 6 }}
+                                >
+                                  <Printer size={14} /> Print Report
+                                </button>
+                              </div>
+
+                              {req.type === 'TB' && (
+                                <div className="preview-grid">
                                   <div className="preview-item">
-                                    <label>Viral Load copies/mL</label>
-                                    <span className={req.results.viralLoadValueType === 'Undetectable' ? 'alert-neg' : 'alert-pos'}>
-                                      {req.results.viralLoadValueType === 'Undetectable'
-                                        ? 'Target Undetectable (< 20 copies)'
-                                        : `${req.results.viralLoadCopies?.toLocaleString()} copies/mL`}
-                                    </span>
+                                    <label>Lab Serial No.</label>
+                                    <span>{req.results.labSerialNumber}</span>
                                   </div>
-                                  {req.results.viralLoadValueType === 'Numerical' && (
+                                  <div className="preview-item">
+                                    <label>Macroscopic Appearance</label>
+                                    <span>{req.results.macroscopicExamination}</span>
+                                  </div>
+                                  {req.results.geneXpertResult && (
                                     <div className="preview-item">
-                                      <label>Log₁₀ copies</label>
-                                      <span>{req.results.viralLoadLogValue}</span>
+                                      <label>GeneXpert Ultra Result</label>
+                                      <span className={req.results.geneXpertResult?.includes('detected') && !req.results.geneXpertResult?.includes('not') ? 'alert-pos' : 'alert-neg'}>
+                                        {req.results.geneXpertResult}
+                                      </span>
                                     </div>
                                   )}
-                                </>
+                                  <div className="preview-item">
+                                    <label>Microscopy Smear 1</label>
+                                    <span>{req.results.microscopySamples?.[0]?.result || 'Not Done'}</span>
+                                  </div>
+                                  <div className="preview-item" style={{ gridColumn: '1/-1' }}>
+                                    <label>Clinical Comments</label>
+                                    <span>{req.results.comment || '—'}</span>
+                                  </div>
+                                  <div className="preview-item">
+                                    <label>Performed By</label>
+                                    <span>{req.results.geneXpertPerformedBy || '—'}</span>
+                                  </div>
+                                </div>
                               )}
 
-                              <div className="preview-item" style={{ gridColumn: '1/-1' }}>
-                                <label>Clinical Comments</label>
-                                <span>{req.results.comment || '—'}</span>
-                              </div>
-                              <div className="preview-item">
-                                <label>Performed By</label>
-                                <span>{req.results.performedBy}</span>
-                              </div>
-                              <div className="preview-item">
-                                <label>Status</label>
-                                <span style={{ color: '#059669', fontWeight: 700 }}>✓ Approved &amp; SMS Dispatched</span>
+                              {req.type === 'HIV' && (
+                                <div className="preview-grid">
+                                  <div className="preview-item">
+                                    <label>Lab Serial No.</label>
+                                    <span>{req.results.labSerialNumber}</span>
+                                  </div>
+                                  <div className="preview-item">
+                                    <label>Date Processed</label>
+                                    <span>{req.results.dateProcessed ? new Date(req.results.dateProcessed).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—'}</span>
+                                  </div>
+                                  {req.sub_type === 'EID' ? (
+                                    <div className="preview-item">
+                                      <label>Infant DNA-PCR Result</label>
+                                      <span className={req.results.eidDnaPcrResult === 'Positive' ? 'alert-pos' : 'alert-neg'}>
+                                        {req.results.eidDnaPcrResult}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="preview-item">
+                                      <label>Viral Load copies/mL</label>
+                                      <span className={req.results.viralLoadValueType === 'Undetectable' ? 'alert-neg' : 'alert-pos'}>
+                                        {req.results.viralLoadValueType === 'Undetectable'
+                                          ? 'Target Undetectable (< 20 copies)'
+                                          : `${req.results.viralLoadCopies?.toLocaleString()} copies/mL`}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="preview-item" style={{ gridColumn: '1/-1' }}>
+                                    <label>Clinical Comments</label>
+                                    <span>{req.results.comment || '—'}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {req.type === 'Haematology' && (
+                                <div className="preview-grid">
+                                  <div className="preview-item">
+                                    <label>Lab Serial No.</label>
+                                    <span>{req.results.labSerialNumber}</span>
+                                  </div>
+                                  <div className="preview-item">
+                                    <label>Date Received</label>
+                                    <span>{req.results.dateReceived ? new Date(req.results.dateReceived).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—'}</span>
+                                  </div>
+
+                                  {req.results.fbc && (
+                                    <div className="preview-item" style={{ gridColumn: '1/-1', marginTop: 12 }}>
+                                      <label style={{ fontSize: '.8rem', color: 'var(--lab-text-title)', fontWeight: 700, marginBottom: 8 }}>FBC Parameters</label>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, background: 'rgba(255,255,255,.02)', padding: 12, borderRadius: 8, border: '1px solid var(--cli-border)' }}>
+                                        <div>WBC: <strong>{req.results.fbc.wbc}</strong> 10^9/L</div>
+                                        <div>RBC: <strong>{req.results.fbc.rbc}</strong> 10^12/L</div>
+                                        <div>Hb: <strong style={{ color: (req.results.fbc.haemoglobin !== undefined && req.results.fbc.haemoglobin < 11.5) ? '#f43f5e' : 'inherit' }}>{req.results.fbc.haemoglobin} g/dL</strong></div>
+                                        <div>Platelets: <strong>{req.results.fbc.platelets}</strong> 10^9/L</div>
+                                        <div>HCT: <strong>{req.results.fbc.haematocrit}%</strong></div>
+                                      </div>
+                                      {req.results.fbc.interpretation && (
+                                        <div style={{ marginTop: 8, fontSize: '.8rem', color: '#93c5fd' }}>
+                                          Interpretation: <em>{req.results.fbc.interpretation}</em>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {req.results.malariaSmear && (
+                                    <div className="preview-item">
+                                      <label>Thin Blood Smear (Malaria)</label>
+                                      <span className={req.results.malariaSmear !== 'Negative' ? 'alert-pos' : 'alert-neg'}>
+                                        {req.results.malariaSmear}
+                                        {req.results.malariaParasitaemia && ` (${req.results.malariaParasitaemia})`}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {req.results.mrdtResult && (
+                                    <div className="preview-item">
+                                      <label>mRDT Result</label>
+                                      <span className={req.results.mrdtResult === 'Positive' ? 'alert-pos' : 'alert-neg'}>
+                                        {req.results.mrdtResult}
+                                        {req.results.mrdtAntigen && ` (${req.results.mrdtAntigen})`}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  <div className="preview-item" style={{ gridColumn: '1/-1' }}>
+                                    <label>Clinical Comments</label>
+                                    <span>{req.results.comment || '—'}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {req.type === 'Chemistry' && (
+                                <div className="preview-grid">
+                                  <div className="preview-item">
+                                    <label>Lab Serial No.</label>
+                                    <span>{req.results.labSerialNumber}</span>
+                                  </div>
+                                  <div className="preview-item">
+                                    <label>Date Received</label>
+                                    <span>{req.results.dateReceived ? new Date(req.results.dateReceived).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—'}</span>
+                                  </div>
+
+                                  {req.results.kft && (
+                                    <div className="preview-item" style={{ gridColumn: '1/-1', marginTop: 12 }}>
+                                      <label style={{ fontSize: '.8rem', color: 'var(--lab-text-title)', fontWeight: 700, marginBottom: 8 }}>Renal Function Test (KFT)</label>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, background: 'rgba(255,255,255,.02)', padding: 12, borderRadius: 8, border: '1px solid var(--cli-border)' }}>
+                                        <div>Urea: <strong>{req.results.kft.urea} mmol/L</strong></div>
+                                        <div>Creatinine: <strong style={{ color: (req.results.kft.creatinine !== undefined && req.results.kft.creatinine > 110) ? '#f43f5e' : 'inherit' }}>{req.results.kft.creatinine} µmol/L</strong></div>
+                                        <div>eGFR: <strong>{req.results.kft.egfr} mL/min</strong></div>
+                                        <div>Sodium: <strong>{req.results.kft.sodiumNa} mmol/L</strong></div>
+                                        <div>Potassium: <strong>{req.results.kft.potassiumK} mmol/L</strong></div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {req.results.lft && (
+                                    <div className="preview-item" style={{ gridColumn: '1/-1', marginTop: 12 }}>
+                                      <label style={{ fontSize: '.8rem', color: 'var(--lab-text-title)', fontWeight: 700, marginBottom: 8 }}>Liver Function Test (LFT)</label>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, background: 'rgba(255,255,255,.02)', padding: 12, borderRadius: 8, border: '1px solid var(--cli-border)' }}>
+                                        <div>ALT: <strong>{req.results.lft.alt} U/L</strong></div>
+                                        <div>AST: <strong>{req.results.lft.ast} U/L</strong></div>
+                                        <div>ALP: <strong>{req.results.lft.alp} U/L</strong></div>
+                                        <div>Total Protein: <strong>{req.results.lft.totalProtein} g/L</strong></div>
+                                        <div>Albumin: <strong>{req.results.lft.albumin} g/L</strong></div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {req.results.lipids && (
+                                    <div className="preview-item" style={{ gridColumn: '1/-1', marginTop: 12 }}>
+                                      <label style={{ fontSize: '.8rem', color: 'var(--lab-text-title)', fontWeight: 700, marginBottom: 8 }}>Lipid Profile</label>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, background: 'rgba(255,255,255,.02)', padding: 12, borderRadius: 8, border: '1px solid var(--cli-border)' }}>
+                                        <div>Total Chol: <strong>{req.results.lipids.totalCholesterol} mmol/L</strong></div>
+                                        <div>LDL: <strong>{req.results.lipids.ldl} mmol/L</strong></div>
+                                        <div>HDL: <strong>{req.results.lipids.hdl} mmol/L</strong></div>
+                                        <div>Triglycerides: <strong>{req.results.lipids.triglycerides} mmol/L</strong></div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {req.results.hpylori && (
+                                    <div className="preview-item">
+                                      <label>H. pylori Assay</label>
+                                      <span className={req.results.hpylori.result === 'Positive' ? 'alert-pos' : 'alert-neg'}>
+                                        {req.results.hpylori.result} ({req.results.hpylori.method})
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  <div className="preview-item" style={{ gridColumn: '1/-1' }}>
+                                    <label>Clinical Comments</label>
+                                    <span>{req.results.comment || '—'}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div style={{ display: 'flex', gap: 20, marginTop: 16, borderTop: '1px dashed var(--cli-border)', paddingTop: 12, fontSize: '.78rem', color: 'var(--cli-text-muted)' }}>
+                                <span>Report generated on: {new Date().toLocaleString()}</span>
+                                <span>Source: Medicy Diagnostic Network</span>
                               </div>
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
 
           </div>

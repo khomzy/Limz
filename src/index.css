@@ -1821,6 +1821,519 @@ body.lab-mode h3,  body.lab-mode h4 { color: var(--lab-text-title); }
 .stagger > *:nth-child(4) { animation-delay: .16s; }
 
 /* ==========================================================================
+   SUN LIMS MULTI-TENANT & LAB DEPARTMENTS
+   ========================================================================== */
+
+/* Department badge colors */
+.test-badge-type.Haematology { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
+.test-badge-type.Chemistry   { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; }
+.lab-mode .test-badge-type.Haematology { background: rgba(239,68,68,.15); color: #fca5a5; }
+.lab-mode .test-badge-type.Chemistry   { background: rgba(245,158,11,.15); color: #fcd34d; }
+
+.badge.haem { background: rgba(239,68,68,.2); border-color: rgba(239,68,68,.3); color: #fca5a5; }
+.badge.chem { background: rgba(245,158,11,.2); border-color: rgba(245,158,11,.3); color: #fcd34d; }
+
+/* Department icons */
+.haem-icon { color: #ef4444; }
+.chem-icon { color: #f59e0b; }
+
+/* Form headers and accenting themes */
+.form-header-bar.haematology-theme { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); }
+.form-header-bar.chemistry-theme   { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+.btn-primary.haem-theme { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); box-shadow: 0 4px 14px rgba(239,68,68,.25); }
+.btn-primary.chem-theme { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); box-shadow: 0 4px 14px rgba(245,158,11,.25); }
+
+/* Department filter tabs */
+.dept-filter-tabs {
+  display: flex;
+  gap: 8px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 4px;
+  border-radius: var(--r-md);
+  margin-bottom: 24px;
+  width: fit-content;
+}
+body:not(.lab-mode) .dept-filter-tabs {
+  background: rgba(0,0,0,.03);
+  border-color: rgba(0,0,0,.06);
+}
+
+.dept-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: none;
+  background: transparent;
+  color: var(--cli-text-muted);
+  font-size: .88rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.dept-tab-btn:hover {
+  background: rgba(0,0,0,.04);
+  color: var(--cli-text-title);
+}
+.lab-mode .dept-tab-btn:hover {
+  background: rgba(255,255,255,.05);
+  color: #fff;
+}
+.dept-tab-btn.active {
+  background: #fff;
+  color: var(--cli-text-title);
+  box-shadow: var(--shadow-sm);
+}
+.lab-mode .dept-tab-btn.active {
+  background: var(--lab-primary);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+}
+
+/* ==========================================================================
+   LAB ANALYZER HUB STYLING
+   ========================================================================== */
+.equipment-dashboard {
+  background: var(--lab-card-bg);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--r-xl);
+  padding: 28px;
+  margin-top: 10px;
+  margin-bottom: 40px;
+  box-shadow: var(--shadow-dark-lg);
+  color: var(--lab-text-body);
+}
+
+.equipment-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--lab-border);
+}
+.equipment-dashboard-header h2 { margin: 0; }
+.equipment-dashboard-header p { margin-top: 4px; color: var(--lab-text-muted); font-size: .82rem; }
+.equipment-secure-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border: 1px solid rgba(16,185,129,.25); border-radius: 999px; color: #6ee7b7; background: rgba(16,185,129,.08); font-size: .72rem; font-weight: 750; }
+.equipment-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
+.equipment-summary-grid article { padding: 18px; border: 1px solid var(--lab-border); border-radius: 12px; display: flex; align-items: center; gap: 12px; background: var(--lab-card-bg2); }
+.equipment-summary-icon { width: 39px; height: 39px; flex: 0 0 auto; border-radius: 10px; display: grid; place-items: center; color: #93c5fd; background: rgba(59,130,246,.1); }
+.equipment-summary-grid strong,
+.equipment-summary-grid small { display: block; }
+.equipment-summary-grid strong { color: var(--lab-text-title); font-size: .9rem; }
+.equipment-summary-grid small { margin-top: 2px; color: var(--lab-text-muted); font-size: .69rem; line-height: 1.35; }
+.equipment-setup-card { margin-top: 18px; padding: 24px; border: 1px solid var(--lab-border2); border-radius: 14px; display: flex; align-items: flex-start; gap: 17px; background: rgba(59,130,246,.045); }
+.equipment-setup-card > span { width: 48px; height: 48px; flex: 0 0 auto; border-radius: 12px; display: grid; place-items: center; color: #93c5fd; background: rgba(59,130,246,.12); }
+.equipment-setup-card h3 { color: var(--lab-text-title); font-size: 1rem; }
+.equipment-setup-card p { margin-top: 8px; color: var(--lab-text-muted); font-size: .8rem; line-height: 1.65; }
+.equipment-setup-card .equipment-setup-note { color: #bfdbfe; }
+@media (max-width: 780px) {
+  .equipment-summary-grid { grid-template-columns: 1fr; }
+  .equipment-dashboard-header { align-items: flex-start; flex-direction: column; }
+}
+
+.eq-hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--lab-border);
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.eq-icon-orb {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, var(--lab-primary), var(--lab-accent));
+  border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(59,130,246,.3);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--r-full);
+  font-weight: 700;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.status-badge.disconnected { background: rgba(239,68,68,.12); color: #fca5a5; }
+.status-badge.listening    { background: rgba(245,158,11,.12); color: #fcd34d; }
+.status-badge.connected    { background: rgba(16,185,129,.12); color: #6ee7b7; }
+.status-badge.transmitting { background: rgba(139,92,246,.12); color: #c4b5fd; }
+
+.status-badge .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.status-badge.disconnected .dot { background: #ef4444; }
+.status-badge.listening .dot    { background: #f59e0b; animation: livePulse 1.2s infinite; }
+.status-badge.connected .dot    { background: #10b981; }
+.status-badge.transmitting .dot { background: #8b5cf6; animation: spin 1s linear infinite; }
+
+.eq-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 1024px) {
+  .eq-layout-grid { grid-template-columns: 1fr; }
+}
+
+.eq-panel {
+  background: var(--lab-card-bg2);
+  border: 1px solid var(--lab-border);
+  border-radius: var(--r-lg);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.eq-panel h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lab-text-title);
+  border-bottom: 1px solid var(--lab-border2);
+  padding-bottom: 12px;
+}
+
+.how-it-works-box {
+  background: rgba(255,255,255,.02);
+  border: 1px dashed var(--lab-border2);
+  padding: 14px;
+  border-radius: var(--r-sm);
+  font-size: .8rem;
+}
+.how-it-works-box h4 {
+  font-size: .83rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #60a5fa;
+  display: flex; align-items: center; gap: 6px;
+}
+.how-it-works-box p { margin-bottom: 8px; line-height: 1.5; color: var(--lab-text-muted); }
+.how-it-works-box ul { padding-left: 16px; list-style: disc; color: var(--lab-text-muted); }
+
+.barcode-info-pane h4 {
+  font-size: .82rem;
+  text-transform: uppercase;
+  color: var(--lab-text-muted);
+  letter-spacing: .5px;
+  margin-top: 14px;
+  margin-bottom: 10px;
+}
+
+.mini-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.mini-queue-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--lab-card-bg);
+  border: 1px solid var(--lab-border);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: .83rem;
+}
+.mini-queue-card .sub {
+  display: block;
+  font-size: .73rem;
+  color: var(--lab-text-muted);
+}
+.barcode-badge {
+  background: var(--lab-border2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: .78rem;
+}
+
+.position-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.position-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--lab-card-bg);
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--lab-border);
+}
+.position-row .pos-number {
+  font-weight: 700;
+  font-size: .83rem;
+  color: #60a5fa;
+}
+.position-row select {
+  max-width: 220px;
+}
+
+.eq-panel.terminal {
+  grid-column: 1 / -1;
+  background: #040711;
+  border-color: #111e35;
+}
+.term-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.btn-small-clear {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.1);
+  color: var(--lab-text-muted);
+  font-size: .72rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-small-clear:hover { background: rgba(255,255,255,.05); color: #fff; }
+
+.console-box {
+  background: #02040a;
+  border: 1px solid #0f172a;
+  border-radius: var(--r-sm);
+  padding: 16px;
+  height: 180px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: .8rem;
+  color: #10b981;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.console-box .placeholder-text {
+  color: #3f3f46;
+  font-style: italic;
+}
+.console-box .log-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  border-left: 2px solid #065f46;
+  padding-left: 8px;
+}
+
+/* ==========================================================================
+   TEST TYPE MODAL CARD ADDITIONS
+   ========================================================================== */
+.dept-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+.dept-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--r-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all .2s;
+  width: 100%;
+}
+.dept-card:hover {
+  background: rgba(255,255,255,.07);
+  border-color: var(--dept-color, var(--lab-primary));
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  transform: translateY(-1px);
+}
+.dept-emoji {
+  font-size: 2rem;
+}
+.dept-info {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+.dept-name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #f1f5f9;
+}
+.dept-sub {
+  font-size: .8rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.dept-tests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  list-style: none;
+  padding: 0;
+}
+.dept-tests li {
+  font-size: .72rem;
+  background: rgba(255,255,255,.05);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #cbd5e1;
+  border: 1px solid rgba(255,255,255,.05);
+}
+.dept-arrow {
+  color: #475569;
+  transition: transform .2s;
+}
+.dept-card:hover .dept-arrow {
+  transform: translateX(4px);
+  color: var(--dept-color);
+}
+.sub-pick-wrap .back-link {
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+/* ==========================================================================
+   PRINT MEDIA QUERY STYLES
+   ========================================================================== */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide dashboard navigation, filters, action bars, simulators, and terminals */
+  nav.navbar,
+  .dashboard-hero,
+  .stats-grid,
+  .queue-header-row,
+  .dept-filter-tabs,
+  .sms-simulator-overlay,
+  .equipment-dashboard,
+  .form-actions,
+  button,
+  .btn-action-small,
+  .logout-btn {
+    display: none !important;
+  }
+
+  /* Force display of expanded results cards for printing */
+  .lims-form-container {
+    box-shadow: none !important;
+    border: none !important;
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .form-header-bar {
+    background: none !important;
+    color: #000 !important;
+    border-bottom: 2px solid #000 !important;
+    padding: 10px 0 !important;
+    margin-bottom: 20px !important;
+  }
+
+  .form-header-bar h2 {
+    font-size: 18pt !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+  }
+
+  .lims-form {
+    padding: 0 !important;
+  }
+
+  .form-section {
+    border-bottom: 1px solid #ddd !important;
+    margin-bottom: 20px !important;
+    padding-bottom: 15px !important;
+    page-break-inside: avoid !important;
+  }
+
+  .section-title {
+    font-size: 13pt !important;
+    border-bottom: 1px solid #555 !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 10px !important;
+    color: #000 !important;
+  }
+
+  /* Print friendly grid layout */
+  .form-grid {
+    display: block !important;
+  }
+
+  .input-group {
+    display: inline-block !important;
+    width: 48% !important;
+    margin-bottom: 10px !important;
+    vertical-align: top !important;
+  }
+  .input-group.full-width {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .input-group label {
+    font-size: 9pt !important;
+    color: #333 !important;
+    font-weight: bold !important;
+    margin-bottom: 2px !important;
+  }
+
+  .input-group input,
+  .input-group select,
+  .input-group textarea {
+    border: none !important;
+    border-bottom: 1px dotted #777 !important;
+    padding: 4px 0 !important;
+    font-size: 10pt !important;
+    background: transparent !important;
+    color: #000 !important;
+  }
+
+  /* Highlight positive/abnormal results on print */
+  .select-danger, .alert-pos {
+    color: #000 !important;
+    font-weight: bold !important;
+    text-decoration: underline !important;
+  }
+}
+
+
+/* ==========================================================================
    RESPONSIVE
    ========================================================================== */
 @media (max-width: 900px) {

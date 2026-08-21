@@ -6,9 +6,10 @@ import WizardOverlay from './WizardOverlay';
 interface TBRequestFormProps {
   onSubmit: (subType: string, patientName: string, patientId: string, phone: string, patientDetails: TbPatientDetails, requestDetails: TbRequestDetails, sampleDetails: TbSampleDetails) => void;
   onCancel: () => void;
+  facility?: string;
 }
 
-export default function TBRequestForm({ onSubmit, onCancel }: TBRequestFormProps) {
+export default function TBRequestForm({ onSubmit, onCancel, facility = 'Medicy Partner Facility' }: TBRequestFormProps) {
   // ── Patient demographics ────────────────────────────────────────────────
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
@@ -438,7 +439,7 @@ export default function TBRequestForm({ onSubmit, onCancel }: TBRequestFormProps
             <span style={{ fontSize: '1.5rem' }}>🧬</span>
             <div>
               <h2 style={{ margin: 0 }}>TB Laboratory Request</h2>
-              <p>Zingwangwa Community Hospital · Ministry of Health Malawi</p>
+              <p>{facility} · Powered by Medicy</p>
             </div>
           </div>
         </div>

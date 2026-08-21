@@ -1,32 +1,72 @@
-# React + TypeScript + Vite
+# Medicy
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Medicy is a clinical and laboratory information platform developed by **Afrisoft**, a technology startup in Malawi. It provides separate TB, HIV, general clinical and laboratory workflows, with facility-level patient record isolation.
 
-Currently, two official plugins are available:
+Production URL: [https://lab.afrisoft.space](https://lab.afrisoft.space)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Local development
 
-## React Compiler
+```bash
+npm ci
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Create a local `.env` file (never commit it):
 
-## Expanding the Oxlint configuration
+```text
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+```
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+The frontend must receive only a Supabase publishable/anon key. Service-role, secret and Africa's Talking credentials belong in protected server-side configuration.
+
+Without Supabase variables, the app starts in local demonstration mode. Demo facility ID is `ZCH001`; the supported username aliases are `lab`, `tb`, `hiv` and `clinician`. Demo passwords remain in `src/supabaseClient.ts` and must not be treated as production credentials.
+
+## Supabase setup
+
+1. Run `schema.sql` in the Supabase SQL editor.
+2. Create users in Supabase Auth.
+3. Assign authorization in each user's `app_metadata` with the Admin API/service role:
 
 ```json
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  "role": "lab",
+  "facility_id": "ZCH001",
+  "facility_name": "Zingwangwa Community Hospital"
 }
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Allowed roles are `lab`, `tb`, `hiv` and `clinician`. Never put roles or facility authorization in `user_metadata`, because users can edit that metadata.
+
+4. Deploy a protected Supabase Edge Function named `send-result-sms` if result SMS delivery is required. Store the Africa's Talking credentials as Edge Function secrets, not `VITE_` variables.
+5. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub Actions repository secrets.
+
+## Workflow boundaries
+
+- `tb`: TB requests and TB history only.
+- `hiv`: HIV viral load/EID requests and HIV history only.
+- `clinician`: haematology and chemistry requests created by that user.
+- `lab`: all diagnostic requests for the user's assigned facility, including status updates and result entry.
+
+The database repeats these boundaries with Row Level Security; UI restrictions are not the security boundary.
+
+## GitHub Pages and custom domain
+
+The workflow in `.github/workflows/deploy.yml` builds the Vite application and publishes `dist` to GitHub Pages. `public/CNAME` sets the custom domain to `lab.afrisoft.space`.
+
+At the DNS provider for `afrisoft.space`, add:
+
+```text
+Type: CNAME
+Name: lab
+Target: khomzy.github.io
+```
+
+After DNS resolves, enable **Enforce HTTPS** in GitHub → repository Settings → Pages. Remove any conflicting `lab` A, AAAA or CNAME record before adding this one.
+
+## Verification
+
+```bash
+npm run build
+npm run lint
+```

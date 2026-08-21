@@ -1,17 +1,92 @@
 import { createClient } from '@supabase/supabase-js';
-import type { LimsRequest, LimsStatus, UserSession, UserRole, TestType, TbResults, HivResults, TbLimsRequest, HivLimsRequest } from './types';
+import type { User } from '@supabase/supabase-js';
+import type { LimsRequest, LimsStatus, UserSession, UserRole, TestType, TbResults, HivResults, TbLimsRequest, HivLimsRequest, HaematologyLimsRequest, ChemistryLimsRequest, HaematologyResults, ChemistryResults } from './types';
 
 // Read Supabase environment variables from Vite
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Determine if we should use real Supabase
-const useRealSupabase = supabaseUrl && supabaseAnonKey;
+const useRealSupabase = Boolean(supabaseUrl && supabaseAnonKey);
+const REMEMBER_ME_KEY = 'medicy_remember_me';
+const DEMO_SESSION_KEY = 'medicy_demo_session';
 
-// Real Supabase Client
-export const supabase = useRealSupabase 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
+const authStorage = {
+  getItem(key: string) {
+    return localStorage.getItem(key) ?? sessionStorage.getItem(key);
+  },
+  setItem(key: string, value: string) {
+    const durable = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+    const destination = durable ? localStorage : sessionStorage;
+    const other = durable ? sessionStorage : localStorage;
+    destination.setItem(key, value);
+    other.removeItem(key);
+  },
+  removeItem(key: string) {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  },
+};
+
+export const supabase = useRealSupabase
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storage: authStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null;
+
+const DEMO_FACILITY_ID = 'ZCH001';
+const DEMO_ACCOUNTS: Record<string, { password: string; session: UserSession }> = {
+  'moghajoh@gmail.com': {
+    password: 'ruth11',
+    session: { email: 'moghajoh@gmail.com', role: 'lab', name: 'John Mogha', facility: 'Zingwangwa Community Hospital', facilityId: DEMO_FACILITY_ID },
+  },
+  'tb@zg.com': {
+    password: '12345678',
+    session: { email: 'tb@zg.com', role: 'tb', name: 'TB Clinician', facility: 'Zingwangwa Community Hospital', facilityId: DEMO_FACILITY_ID },
+  },
+  'clinitian@zg.com': {
+    password: '12345678',
+    session: { email: 'clinitian@zg.com', role: 'hiv', name: 'HIV Clinician', facility: 'Zingwangwa Community Hospital', facilityId: DEMO_FACILITY_ID },
+  },
+  'clinical@zg.com': {
+    password: '12345678',
+    session: { email: 'clinical@zg.com', role: 'clinician', name: 'General Clinician', facility: 'Zingwangwa Community Hospital', facilityId: DEMO_FACILITY_ID },
+  },
+};
+
+const USERNAME_ALIASES: Record<string, string> = {
+  lab: 'moghajoh@gmail.com',
+  tb: 'tb@zg.com',
+  hiv: 'clinitian@zg.com',
+  clinician: 'clinical@zg.com',
+};
+
+const isUserRole = (value: unknown): value is UserRole =>
+  value === 'lab' || value === 'clinician' || value === 'tb' || value === 'hiv';
+
+const sessionFromSupabaseUser = (user: User): UserSession => {
+  const fallbackDemo = DEMO_ACCOUNTS[user.email?.toLowerCase() || '']?.session;
+  const role = user.app_metadata?.role ?? fallbackDemo?.role;
+  const facilityId = user.app_metadata?.facility_id ?? fallbackDemo?.facilityId;
+
+  if (!isUserRole(role) || typeof facilityId !== 'string' || !facilityId.trim()) {
+    throw new Error('This account is not assigned to a Medicy facility and role. Contact your facility administrator.');
+  }
+
+  return {
+    email: user.email || fallbackDemo?.email || '',
+    role,
+    facilityId: facilityId.toUpperCase(),
+    facility: user.app_metadata?.facility_name || user.user_metadata?.facility_name || user.user_metadata?.facility || fallbackDemo?.facility || 'Medicy Partner Facility',
+    name: user.user_metadata?.full_name || fallbackDemo?.name || 'Medical Practitioner',
+    userId: user.id,
+  };
+};
+
 
 // ==========================================
 // PRE-SEEDED TEST DATA FOR DEMO MODE
@@ -22,10 +97,13 @@ const SEED_REQUESTS: LimsRequest[] = [
     type: 'TB',
     sub_type: 'GeneXpert Ultra',
     status: 'Completed',
+    department: 'Molecular',
     clinician_email: 'tb@zg.com',
     patient_name: 'Modester Silence',
     patient_id: 'BT/TBU/2026/89',
     patient_phone: '0995393202',
+    facility: 'Zingwangwa Community Hospital',
+    facility_id: DEMO_FACILITY_ID,
     created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
     updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     results_uploaded_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -89,10 +167,13 @@ const SEED_REQUESTS: LimsRequest[] = [
     type: 'HIV',
     sub_type: 'Viral Load',
     status: 'Testing',
+    department: 'Molecular',
     clinician_email: 'clinitian@zg.com',
     patient_name: 'Mervis Banda',
     patient_id: 'ZA-99281-91',
     patient_phone: '0999876543',
+    facility: 'Zingwangwa Community Hospital',
+    facility_id: DEMO_FACILITY_ID,
     created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
     patient_details: {
@@ -110,7 +191,7 @@ const SEED_REQUESTS: LimsRequest[] = [
     sample_details: {
       dateDrawn: '2026-07-01',
       sampleType: 'Plasma',
-      currentArtRegimen: '5A', // e.g. TDF/3TC/EFV
+      currentArtRegimen: '5A',
       collectorSurname: 'Moyo',
       collectorFirstName: 'Limbani',
       collectorPhone: '0998112233',
@@ -119,41 +200,67 @@ const SEED_REQUESTS: LimsRequest[] = [
     results: {}
   } as HivLimsRequest,
   {
-    id: 'req-hiv-003',
-    type: 'HIV',
-    sub_type: 'EID',
+    id: 'req-haem-001',
+    type: 'Haematology',
+    sub_type: 'FBC',
     status: 'Pending Sample',
-    clinician_email: 'clinitian@zg.com',
-    patient_name: 'Exposed Child Phiri',
-    patient_id: 'EC-7728-EID',
-    patient_phone: '0999123456',
+    department: 'Haematology',
+    clinician_email: 'clinical@zg.com',
+    patient_name: 'Pachalo Phiri',
+    patient_id: 'BT/HAEM/2026/04',
+    patient_phone: '0888123456',
+    facility: 'Zingwangwa Community Hospital',
+    facility_id: DEMO_FACILITY_ID,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     patient_details: {
-      surname: 'Phiri',
-      firstName: 'Exposed Child',
-      patientId: 'EC-7728-EID',
-      dateOfBirth: '2026-05-15',
-      genderPregBf: 'Male', // Child
-      phone: '0999123456'
+      fullName: 'Pachalo Phiri',
+      age: 28,
+      gender: 'Male',
+      telephone: '0888123456',
+      ward: 'OPD'
     },
     request_details: {
-      testType: 'EID',
-      eidReason: 'EID initial',
-      motherSurname: 'Phiri',
-      motherFirstName: 'Gift',
-      uniqueChildId: 'EC-7728'
+      tests: { fbc: true, thinBloodSmear: false, mrdt: false, other: false }
     },
     sample_details: {
-      dateDrawn: '2026-07-02',
-      sampleType: 'DBS',
-      collectorSurname: 'Chirwa',
-      collectorFirstName: 'Grace',
-      collectorPhone: '0888998877',
-      htcProviderId: 'HTC-104'
+      sampleType: 'EDTA Whole Blood',
+      dateCollected: new Date().toISOString().split('T')[0],
+      timeCollected: '08:30'
     },
     results: {}
-  } as HivLimsRequest
+  } as HaematologyLimsRequest,
+  {
+    id: 'req-chem-001',
+    type: 'Chemistry',
+    sub_type: 'KFT + LFT',
+    status: 'Pending Sample',
+    department: 'Chemistry',
+    clinician_email: 'clinical@zg.com',
+    patient_name: 'Grace Chunga',
+    patient_id: 'BT/CHEM/2026/18',
+    patient_phone: '0999778899',
+    facility: 'Zingwangwa Community Hospital',
+    facility_id: DEMO_FACILITY_ID,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    patient_details: {
+      fullName: 'Grace Chunga',
+      age: 52,
+      gender: 'Female',
+      telephone: '0999778899',
+      ward: 'Ward 2A'
+    },
+    request_details: {
+      tests: { kft: true, lft: true, lipidProfile: false, hpylori: false, other: false }
+    },
+    sample_details: {
+      sampleType: 'Serum',
+      dateCollected: new Date().toISOString().split('T')[0],
+      timeCollected: '09:15'
+    },
+    results: {}
+  } as ChemistryLimsRequest
 ];
 
 // Seed storage helper
@@ -172,120 +279,88 @@ export const LimsDbService = {
     return !!useRealSupabase;
   },
 
-  // 1. Authenticate user
-  async login(email: string, password: string): Promise<UserSession> {
-    const formattedEmail = email.toLowerCase().trim();
+  setRememberMe(remember: boolean) {
+    if (remember) localStorage.setItem(REMEMBER_ME_KEY, 'true');
+    else localStorage.removeItem(REMEMBER_ME_KEY);
+  },
 
-    let demoSession: UserSession | null = null;
-
-    // Check predefined hardcoded credentials for demo metadata mapping
-    if (formattedEmail === 'moghajoh@gmail.com' && password === 'ruth11') {
-      demoSession = {
-        email: formattedEmail,
-        role: 'lab',
-        name: 'John Mogha',
-        facility: 'Zingwangwa Lab'
-      };
-    } else if (formattedEmail === 'clinitian@zg.com' && password === '12345678') {
-      demoSession = {
-        email: formattedEmail,
-        role: 'clinician',
-        name: 'General Clinician',
-        facility: 'Zingwangwa Community Hospital'
-      };
-    } else if (formattedEmail === 'tb@zg.com' && password === '12345678') {
-      demoSession = {
-        email: formattedEmail,
-        role: 'tb',
-        name: 'TB Department',
-        facility: 'Zingwangwa TBU'
-      };
+  async restoreSession(): Promise<UserSession | null> {
+    if (useRealSupabase && supabase) {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      return data.session?.user ? sessionFromSupabaseUser(data.session.user) : null;
     }
+
+    const stored = localStorage.getItem(DEMO_SESSION_KEY) ?? sessionStorage.getItem(DEMO_SESSION_KEY);
+    return stored ? JSON.parse(stored) as UserSession : null;
+  },
+
+  async login(facilityId: string, username: string, password: string, rememberMe: boolean): Promise<UserSession> {
+    const normalizedFacilityId = facilityId.trim().toUpperCase();
+    const normalizedUsername = username.toLowerCase().trim();
+    const email = USERNAME_ALIASES[normalizedUsername] || normalizedUsername;
+
+    if (!normalizedFacilityId) throw new Error('Facility ID is required.');
+    this.setRememberMe(rememberMe);
 
     if (useRealSupabase && supabase) {
-      // Attempt real Supabase Auth - this is REQUIRED to establish a session for RLS policies
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formattedEmail,
-        password
-      });
+      if (!email.includes('@')) throw new Error('Enter the username or work email issued by your facility.');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw new Error('The facility ID, username or password is incorrect.');
+      if (!data.user) throw new Error('Medicy could not open this account. Please try again.');
 
-      if (error) {
-        // If we have a demo session but Supabase fails, it might be because the user hasn't created the demo accounts in Supabase yet.
-        // However, RLS will fail if we don't have a session.
-        if (demoSession) {
-          console.warn('Supabase Auth failed for demo account. RLS policies may block database access.', error.message);
-          return demoSession;
-        }
-        throw new Error(error.message);
+      const userSession = sessionFromSupabaseUser(data.user);
+      if (userSession.facilityId !== normalizedFacilityId) {
+        await supabase.auth.signOut();
+        throw new Error('This account does not belong to the facility ID entered.');
       }
-
-      if (data.user) {
-        // If it's a demo account, use the demo metadata but prefer actual user_metadata if present
-        if (demoSession) {
-          return {
-            ...demoSession,
-            name: data.user.user_metadata?.full_name || demoSession.name,
-            facility: data.user.user_metadata?.facility || demoSession.facility
-          };
-        }
-
-        // Map role for other users based on metadata or email
-        let role: UserRole = 'clinician';
-        if (formattedEmail.includes('lab') || formattedEmail === 'moghajoh@gmail.com') {
-          role = 'lab';
-        } else if (formattedEmail.includes('tb')) {
-          role = 'tb';
-        }
-
-        return {
-          email: formattedEmail,
-          role,
-          name: data.user.user_metadata?.full_name || 'Medical Practitioner',
-          facility: data.user.user_metadata?.facility || 'Zingwangwa Hospital'
-        };
-      }
+      return userSession;
     }
 
-    // Fallback for local storage mode
-    if (demoSession) {
-      return demoSession;
+    const account = DEMO_ACCOUNTS[email];
+    if (!account || account.password !== password || account.session.facilityId !== normalizedFacilityId) {
+      throw new Error('The facility ID, username or password is incorrect.');
     }
 
-    throw new Error('Invalid email or password. Please use the preconfigured hospital login credentials.');
+    const destination = rememberMe ? localStorage : sessionStorage;
+    const other = rememberMe ? sessionStorage : localStorage;
+    destination.setItem(DEMO_SESSION_KEY, JSON.stringify(account.session));
+    other.removeItem(DEMO_SESSION_KEY);
+    return account.session;
+  },
+
+  async logout(): Promise<void> {
+    if (supabase) await supabase.auth.signOut();
+    localStorage.removeItem(DEMO_SESSION_KEY);
+    sessionStorage.removeItem(DEMO_SESSION_KEY);
+    localStorage.removeItem(REMEMBER_ME_KEY);
   },
 
   // 2. Fetch requests (with status/role filters)
-  async getRequests(role: UserRole, email: string): Promise<LimsRequest[]> {
+  async getRequests(userSession: UserSession): Promise<LimsRequest[]> {
+    const { role, email, facilityId } = userSession;
     if (useRealSupabase && supabase) {
-      let query = supabase.from('lims_requests').select('*');
-      
-      // If clinician or tb, restrict to their specific requests or department
-      if (role === 'clinician') {
-        query = query.or(`clinician_email.eq.${email},clinician_email.like.%zg.com`);
-      } else if (role === 'tb') {
-        query = query.eq('clinician_email', email);
-      }
-      
+      let query = supabase.from('lims_requests').select('*').eq('facility_id', facilityId);
+
+      if (role === 'tb') query = query.eq('type', 'TB');
+      else if (role === 'hiv') query = query.eq('type', 'HIV');
+      else if (role === 'clinician') query = query.eq('clinician_email', email);
+
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data as LimsRequest[];
     } else {
-      // LocalStorage Fallback
       initializeLocalStorage();
       const raw = localStorage.getItem('lims_requests');
       const all: LimsRequest[] = raw ? JSON.parse(raw) : [];
-      
-      // Sort by creation time desc
+
       all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      
-      if (role === 'lab') {
-        return all;
-      } else if (role === 'tb') {
-        return all.filter(r => r.clinician_email === 'tb@zg.com');
-      } else {
-        // General clinician sees clinician and general zg.com requests
-        return all.filter(r => r.clinician_email === 'clinitian@zg.com' || r.clinician_email.endsWith('zg.com'));
-      }
+
+      const facilityRequests = all.filter(r => (r.facility_id || DEMO_FACILITY_ID) === facilityId);
+      if (role === 'lab') return facilityRequests;
+      if (role === 'tb') return facilityRequests.filter(r => r.type === 'TB');
+      if (role === 'hiv') return facilityRequests.filter(r => r.type === 'HIV');
+      return facilityRequests.filter(r => r.clinician_email === email);
     }
   },
 
@@ -299,16 +374,26 @@ export const LimsDbService = {
     patientPhone: string,
     patientDetails: any,
     requestDetails: any,
-    sampleDetails: any
+    sampleDetails: any,
+    userSession: UserSession,
   ): Promise<LimsRequest> {
-    const newRequest: Partial<LimsRequest> = {
+    // Map TestType to appropriate LimsDepartment
+    let department: 'Molecular' | 'Haematology' | 'Chemistry' = 'Molecular';
+    if (type === 'Haematology') department = 'Haematology';
+    else if (type === 'Chemistry') department = 'Chemistry';
+
+    const newRequest: any = {
       type,
       sub_type: subType,
       status: 'Pending Sample',
+      department,
       clinician_email: clinicianEmail,
       patient_name: patientName,
       patient_id: patientId,
       patient_phone: patientPhone,
+      facility: userSession.facility,
+      facility_id: userSession.facilityId,
+      created_by: userSession.userId,
       patient_details: patientDetails,
       request_details: requestDetails,
       sample_details: sampleDetails,
@@ -329,19 +414,19 @@ export const LimsDbService = {
       initializeLocalStorage();
       const raw = localStorage.getItem('lims_requests');
       const all: LimsRequest[] = raw ? JSON.parse(raw) : [];
-      
+
       const created: LimsRequest = {
         ...newRequest,
         id: 'req-' + Math.random().toString(36).substr(2, 9)
       } as LimsRequest;
-      
+
       all.push(created);
       localStorage.setItem('lims_requests', JSON.stringify(all));
       return created;
     }
   },
 
-  // 4. Update request status (Lab Technicians receiving or analyzing samples)
+  // 4. Update request status
   async updateStatus(id: string, status: LimsStatus): Promise<LimsRequest> {
     if (useRealSupabase && supabase) {
       const { data, error } = await supabase
@@ -356,22 +441,22 @@ export const LimsDbService = {
       initializeLocalStorage();
       const raw = localStorage.getItem('lims_requests');
       const all: LimsRequest[] = raw ? JSON.parse(raw) : [];
-      
+
       const index = all.findIndex(r => r.id === id);
       if (index === -1) throw new Error('Request not found');
-      
+
       all[index].status = status;
       all[index].updated_at = new Date().toISOString();
-      
+
       localStorage.setItem('lims_requests', JSON.stringify(all));
       return all[index];
     }
   },
 
-  // 5. Upload test results (Lab Technicians completing the test)
+  // 5. Upload test results (supporting dynamic facility rebranding in SMS)
   async uploadResults(
-    id: string, 
-    results: any, 
+    id: string,
+    results: any,
     technicianEmail: string,
     onSmsTrigger?: (smsDetails: { to: string; patientName: string; text: string }) => void
   ): Promise<LimsRequest> {
@@ -398,43 +483,46 @@ export const LimsDbService = {
       initializeLocalStorage();
       const raw = localStorage.getItem('lims_requests');
       const all: LimsRequest[] = raw ? JSON.parse(raw) : [];
-      
+
       const index = all.findIndex(r => r.id === id);
       if (index === -1) throw new Error('Request not found');
-      
+
       all[index] = {
         ...all[index],
         ...updatePayload
       } as any;
-      
+
       localStorage.setItem('lims_requests', JSON.stringify(all));
       updatedRecord = all[index];
     }
 
     // Trigger SMS Notification Logic
     if (updatedRecord.patient_phone) {
-      const isTb = updatedRecord.type === 'TB';
       let summary = '';
-      if (isTb) {
+      if (updatedRecord.type === 'TB') {
         const tbRes = updatedRecord.results as TbResults;
-        const xpert = tbRes.geneXpertResult;
-        const micro = tbRes.microscopySamples?.[0]?.result;
-        const lam = tbRes.urineLamResult;
-        summary = xpert 
-          ? `GeneXpert: ${xpert}` 
-          : (micro ? `Microscopy: ${micro}` : (lam ? `Urine LAM: ${lam}` : 'Results Available'));
-      } else {
+        summary = tbRes.geneXpertResult || 'Microscopy/Urine LAM result completed';
+      } else if (updatedRecord.type === 'HIV') {
         const hivRes = updatedRecord.results as HivResults;
-        const vl = hivRes.viralLoadValueType === 'Undetectable' 
-          ? 'Undetectable' 
-          : (hivRes.viralLoadCopies !== undefined ? `${hivRes.viralLoadCopies} copies/ml` : '');
-        const eid = hivRes.eidDnaPcrResult;
-        summary = vl ? `Viral Load: ${vl}` : (eid ? `EID DNA-PCR: ${eid}` : 'Results Available');
+        summary = hivRes.viralLoadValueType === 'Undetectable'
+          ? 'Undetectable'
+          : (hivRes.viralLoadCopies !== undefined ? `${hivRes.viralLoadCopies} copies/ml` : 'DNA-PCR complete');
+      } else if (updatedRecord.type === 'Haematology') {
+        const haemRes = updatedRecord.results as HaematologyResults;
+        const hbVal = haemRes.fbc?.haemoglobin ? `Hb ${haemRes.fbc.haemoglobin} g/dL` : '';
+        const mrdtVal = haemRes.mrdtResult ? `mRDT ${haemRes.mrdtResult}` : '';
+        summary = [hbVal, mrdtVal].filter(Boolean).join(', ') || 'FBC/Malaria Complete';
+      } else if (updatedRecord.type === 'Chemistry') {
+        const chemRes = updatedRecord.results as ChemistryResults;
+        const ureaVal = chemRes.kft?.urea ? `Urea ${chemRes.kft.urea}` : '';
+        const altVal = chemRes.lft?.alt ? `ALT ${chemRes.lft.alt}` : '';
+        summary = [ureaVal, altVal].filter(Boolean).join(', ') || 'KFT/LFT Complete';
       }
 
-      const clinicianName = isTb ? 'TB Department' : 'General Clinician';
-      const smsText = `Zingwangwa LIMS: Results for patient ${updatedRecord.patient_name} (ID: ${updatedRecord.patient_id || 'N/A'}) are ready. Test: ${updatedRecord.sub_type}. Result: ${summary}. Requested by: ${clinicianName}.`;
-      
+      // Rebranded hospital name comes dynamically from facility or default
+      const hospitalName = updatedRecord.facility || 'Medicy Partner Laboratory';
+      const smsText = `Medicy notification: Results for patient ${updatedRecord.patient_name} (ID: ${updatedRecord.patient_id || 'N/A'}) are ready at ${hospitalName}. Test: ${updatedRecord.sub_type}. Result summary: ${summary}.`;
+
       // Fire visual simulator callback
       if (onSmsTrigger) {
         onSmsTrigger({
@@ -444,39 +532,19 @@ export const LimsDbService = {
         });
       }
 
-      // Run real AfricasTalking SMS endpoint in background if configured
-      this.sendRealSms(updatedRecord.patient_phone, smsText).catch(e => console.log('AT API Call (Skipped/Prod only):', e.message));
+      this.sendResultSms(updatedRecord.patient_phone, smsText, updatedRecord.id).catch(error => {
+        console.warn('Result SMS delivery was not completed:', error instanceof Error ? error.message : error);
+      });
     }
 
     return updatedRecord;
   },
 
-  // Simulated method showing how the actual AfricasTalking SMS API integration works
-  async sendRealSms(phone: string, text: string) {
-    const username = import.meta.env.VITE_AFRICASTALKING_USERNAME;
-    const apiKey = import.meta.env.VITE_AFRICASTALKING_API_KEY;
-
-    if (!username || !apiKey) {
-      return; // Run in sandbox/simulation mode if keys are not present
-    }
-
-    try {
-      const response = await fetch('https://api.africastalking.com/version1/messaging', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-          'apiKey': apiKey
-        },
-        body: new URLSearchParams({
-          username: username,
-          to: phone,
-          message: text
-        })
-      });
-      return await response.json();
-    } catch (err) {
-      console.warn('Failed to call AfricasTalking SMS API directly', err);
-    }
+  async sendResultSms(phone: string, text: string, requestId: string) {
+    if (!supabase) return;
+    const { error } = await supabase.functions.invoke('send-result-sms', {
+      body: { phone, text, requestId },
+    });
+    if (error) throw error;
   }
 };

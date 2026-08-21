@@ -97,7 +97,7 @@ export default function SmsSimulator({ sms, onClose }: SmsSimulatorProps) {
             <div className="avatar">ZT</div>
             <div className="app-contact">
               <span className="contact-name">AfricasTalking Gateway</span>
-              <span className="contact-status">online (Zingwangwa LIMS)</span>
+              <span className="contact-status">online (Medicy)</span>
             </div>
           </div>
 

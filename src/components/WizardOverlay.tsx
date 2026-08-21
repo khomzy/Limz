@@ -16,15 +16,17 @@ interface WizardOverlayProps {
   onClose: () => void;
   onSubmit: () => void;
   isLastStep: boolean;
-  accentColor?: 'tb' | 'hiv' | 'lab';
+  accentColor?: 'tb' | 'hiv' | 'lab' | 'haem' | 'chem';
   title: string;
   onStepRequiredCheck?: () => string[];
 }
 
 const ACCENT = {
-  tb:  { color: '#10b981', glow: 'rgba(16,185,129,.25)', dark: '#064e3b' },
-  hiv: { color: '#ec4899', glow: 'rgba(236,72,153,.25)', dark: '#831843' },
-  lab: { color: '#3b82f6', glow: 'rgba(59,130,246,.25)',  dark: '#1e3a8a' },
+  tb:   { color: '#10b981', glow: 'rgba(16,185,129,.25)', dark: '#064e3b' },
+  hiv:  { color: '#ec4899', glow: 'rgba(236,72,153,.25)', dark: '#831843' },
+  lab:  { color: '#3b82f6', glow: 'rgba(59,130,246,.25)', dark: '#1e3a8a' },
+  haem: { color: '#ef4444', glow: 'rgba(239,68,68,.25)',  dark: '#7f1d1d' },
+  chem: { color: '#f59e0b', glow: 'rgba(245,158,11,.25)', dark: '#78350f' },
 };
 
 export default function WizardOverlay({
@@ -317,7 +319,7 @@ export default function WizardOverlay({
         <div className="wiz-topbar">
           <div className="wiz-top-title">
             <span className="wiz-top-badge" style={{ background: acc.dark }}>
-              {accentColor === 'tb' ? '🧬 TB' : accentColor === 'hiv' ? '🩸 HIV' : '🔬 Lab'}
+              {accentColor === 'tb' ? '🧬 TB' : accentColor === 'hiv' ? '🩸 HIV' : accentColor === 'haem' ? '🩸 Haematology' : accentColor === 'chem' ? '⚗️ Chemistry' : '🔬 Lab'}
             </span>
             {title}
           </div>

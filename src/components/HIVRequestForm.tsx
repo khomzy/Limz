@@ -6,12 +6,13 @@ import WizardOverlay from './WizardOverlay';
 interface HIVRequestFormProps {
   onSubmit: (subType: string, patientName: string, patientId: string, phone: string, patientDetails: HivPatientDetails, requestDetails: HivRequestDetails, sampleDetails: HivSampleDetails) => void;
   onCancel: () => void;
+  facility?: string;
 }
 
 const ART_REGIMENS_PAEDIATRIC = ['0P', '2P', '4P', '9P', '11P', '14P', '15P', '16P'];
 const ART_REGIMENS_ADULT = ['0A', '2A', '4A', '5A', '6A', '7A', '8A', '9A', '10A', '11A', '12A', '13A', '14A', '15A', 'NS'];
 
-export default function HIVRequestForm({ onSubmit, onCancel }: HIVRequestFormProps) {
+export default function HIVRequestForm({ onSubmit, onCancel, facility = 'Medicy Partner Facility' }: HIVRequestFormProps) {
   // ── Demographics ──────────────────────────────────────────────────────
   const [surname, setSurname]             = useState('');
   const [firstName, setFirstName]         = useState('');
@@ -392,7 +393,7 @@ export default function HIVRequestForm({ onSubmit, onCancel }: HIVRequestFormPro
             <span style={{ fontSize: '1.5rem' }}>🩺</span>
             <div>
               <h2 style={{ margin: 0 }}>HIV EID / Viral Load Requisition</h2>
-              <p>Zingwangwa Community Hospital · Ministry of Health Malawi</p>
+              <p>{facility} · Powered by Medicy</p>
             </div>
           </div>
         </div>

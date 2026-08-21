@@ -1,27 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import type { LimsRequest, TbResults, HivResults } from '../types';
-import { FlaskConical, Award, BookOpen, Calculator, Check, AlertTriangle } from 'lucide-react';
+import type { LimsRequest, TbResults, HivResults, HaematologyResults, ChemistryResults } from '../types';
+import { FlaskConical, Award, BookOpen, Printer } from 'lucide-react';
 
 interface ResultEntryFormProps {
   request: LimsRequest;
-  onSubmit: (results: TbResults | HivResults) => void;
+  onSubmit: (results: any) => void;
   onCancel: () => void;
 }
 
 export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultEntryFormProps) {
-  const isTb = request.type === 'TB';
-
   // Shared state
-  const [labSerialNumber, setLabSerialNumber] = useState(`LAB-${request.type}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [labSerialNumber, setLabSerialNumber] = useState(`LAB-${request.type.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`);
   const [dateReceived, setDateReceived] = useState(new Date().toISOString().split('T')[0]);
   const [comment, setComment] = useState('');
+  const [performedBy, setPerformedBy] = useState('John Mogha');
 
   // ==========================================
   // TB RESULTS STATE
   // ==========================================
   const [macroscopic, setMacroscopic] = useState<TbResults['macroscopicExamination']>('Muco-purulent');
   const [macroscopicOther, setMacroscopicOther] = useState('');
-  
+
   // Microscopy
   const [microscopyDate, setMicroscopyDate] = useState(new Date().toISOString().split('T')[0]);
   const [microResult1, setMicroResult1] = useState<'Negative' | 'Positive' | 'Not Done'>('Not Done');
@@ -36,7 +35,6 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
   const [geneXpertDate, setGeneXpertDate] = useState(new Date().toISOString().split('T')[0]);
   const [geneXpertResult, setGeneXpertResult] = useState<TbResults['geneXpertResult']>('MTB not detected');
   const [geneXpertType, setGeneXpertType] = useState<'Xpert Ultra' | 'Truenat'>('Xpert Ultra');
-  const [geneXpertPerformedBy] = useState('John Mogha');
 
   // Reflex (XDR)
   const [rifResistantDetected, setRifResistantDetected] = useState(false);
@@ -50,7 +48,6 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
   // Urine LAM
   const [urineLamDate, setUrineLamDate] = useState(new Date().toISOString().split('T')[0]);
   const [urineLamResult, setUrineLamResult] = useState<TbResults['urineLamResult']>('Not Done');
-  const [urineLamPerformedBy] = useState('John Mogha');
 
   const [reviewedBy, setReviewedBy] = useState('Dr. Ruth Phiri');
   const [reviewedDate, setReviewedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -59,22 +56,69 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
   // HIV RESULTS STATE
   // ==========================================
   const [dateProcessed, setDateProcessed] = useState(new Date().toISOString().split('T')[0]);
-  const [performedBy, setPerformedBy] = useState('John Mogha');
-  
+
   // EID specific
   const [eidDnaPcrResult, setEidDnaPcrResult] = useState<HivResults['eidDnaPcrResult']>('Negative');
-  
+
   // VL specific
   const [vlValueType, setVlValueType] = useState<HivResults['viralLoadValueType']>('Numerical');
   const [vlCopies, setVlCopies] = useState('1000');
   const [vlLog, setVlLog] = useState('3.00');
 
   // ==========================================
+  // HAEMATOLOGY RESULTS STATE
+  // ==========================================
+  const [wbc, setWbc] = useState('7.2');
+  const [rbc, setRbc] = useState('4.5');
+  const [hb, setHb] = useState('13.5');
+  const [hct, setHct] = useState('40.2');
+  const [mcv, setMcv] = useState('88.5');
+  const [mch, setMch] = useState('29.8');
+  const [mchc, setMchc] = useState('33.4');
+  const [plt, setPlt] = useState('245');
+  const [neut, setNeut] = useState('60');
+  const [lymph, setLymph] = useState('32');
+  const [haemInterpretation, setHaemInterpretation] = useState('');
+
+  const [malariaSmear, setMalariaSmear] = useState<'Negative' | 'P. falciparum' | 'P. vivax' | 'P. malariae' | 'P. ovale' | 'Mixed'>('Negative');
+  const [malariaParasitaemia, setMalariaParasitaemia] = useState('');
+  const [mrdtResult, setMrdtResult] = useState<'Negative' | 'Positive' | 'Invalid'>('Negative');
+  const [mrdtAntigen, setMrdtAntigen] = useState<'HRP2 (P. falciparum)' | 'pLDH (Pan)'>('HRP2 (P. falciparum)');
+
+  // ==========================================
+  // CHEMISTRY RESULTS STATE
+  // ==========================================
+  // KFT
+  const [urea, setUrea] = useState('5.4');
+  const [creatinine, setCreatinine] = useState('85');
+  const [egfr, setEgfr] = useState('95');
+  const [sodium, setSodium] = useState('140');
+  const [potassium, setPotassium] = useState('4.2');
+  const [chloride, setChloride] = useState('102');
+  // LFT
+  const [alt, setAlt] = useState('25');
+  const [ast, setAst] = useState('30');
+  const [alp, setAlp] = useState('75');
+  const [ggt, setGgt] = useState('28');
+  const [totalBilirubin, setTotalBilirubin] = useState('12');
+  const [directBilirubin, setDirectBilirubin] = useState('3');
+  const [totalProtein, setTotalProtein] = useState('72');
+  const [albumin, setAlbumin] = useState('42');
+  // Lipids
+  const [chol, setChol] = useState('4.8');
+  const [ldl, setLdl] = useState('2.8');
+  const [hdl, setHdl] = useState('1.4');
+  const [trig, setTrig] = useState('1.3');
+  // H. pylori
+  const [hpMethod, setHpMethod] = useState<'Rapid Antigen (Stool)' | 'Serology (IgG)'>('Rapid Antigen (Stool)');
+  const [hpResult, setHpResult] = useState<'Positive' | 'Negative' | 'Invalid'>('Negative');
+
+
+  // ==========================================
   // SMART AUTOMATIONS
   // ==========================================
-  // 1. TB: Detect if RIF resistance is selected and auto-expand and highlight XDR Section
   useEffect(() => {
-    if (!isTb) return;
+    if (request.type !== 'TB') return;
     if (geneXpertResult === 'RIF resistant detected') {
       setRifResistantDetected(true);
       setShowXdrSection(true);
@@ -92,11 +136,10 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
         setResLevofloxacin('Not Done');
       }
     }
-  }, [geneXpertResult, isTb]);
+  }, [geneXpertResult, request.type, resEthionamide, resIsoniazid, resLevofloxacin, resMoxifloxacin]);
 
-  // 2. HIV: Auto-calculate Log copies when numerical count changes
   useEffect(() => {
-    if (isTb) return;
+    if (request.type !== 'HIV') return;
     if (vlValueType === 'Undetectable') {
       setVlLog('0.00');
       setVlCopies('');
@@ -108,12 +151,12 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
         setVlLog('0.00');
       }
     }
-  }, [vlCopies, vlValueType, isTb]);
+  }, [vlCopies, vlValueType, request.type]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isTb) {
+    if (request.type === 'TB') {
       const tbResults: TbResults = {
         labSerialNumber,
         dateReceived,
@@ -139,23 +182,23 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
         geneXpertDate,
         geneXpertType,
         geneXpertResult,
-        geneXpertPerformedBy,
+        geneXpertPerformedBy: performedBy,
         reflexDate: showXdrSection ? xdrDate : undefined,
         reflexResults: showXdrSection ? [
-          { drug: 'Isoniazid', result: resIsoniazid, performedBy: geneXpertPerformedBy },
-          { drug: 'Ethionamide', result: resEthionamide, performedBy: geneXpertPerformedBy },
-          { drug: 'Moxifloxacin', result: resMoxifloxacin, performedBy: geneXpertPerformedBy },
-          { drug: 'Levofloxacin', result: resLevofloxacin, performedBy: geneXpertPerformedBy }
+          { drug: 'Isoniazid', result: resIsoniazid, performedBy },
+          { drug: 'Ethionamide', result: resEthionamide, performedBy },
+          { drug: 'Moxifloxacin', result: resMoxifloxacin, performedBy },
+          { drug: 'Levofloxacin', result: resLevofloxacin, performedBy }
         ] : undefined,
         urineLamDate,
         urineLamResult,
-        urineLamPerformedBy,
+        urineLamPerformedBy: performedBy,
         comment,
         reviewedBy,
         reviewedDate
       };
       onSubmit(tbResults);
-    } else {
+    } else if (request.type === 'HIV') {
       const hivResults: HivResults = {
         labSerialNumber,
         dateReceived,
@@ -168,26 +211,98 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
         comment
       };
       onSubmit(hivResults);
+    } else if (request.type === 'Haematology') {
+      const haemResults: HaematologyResults = {
+        labSerialNumber,
+        dateReceived,
+        performedBy,
+        fbc: request.request_details.tests.fbc ? {
+          wbc: wbc ? parseFloat(wbc) : undefined,
+          rbc: rbc ? parseFloat(rbc) : undefined,
+          haemoglobin: hb ? parseFloat(hb) : undefined,
+          haematocrit: hct ? parseFloat(hct) : undefined,
+          mcv: mcv ? parseFloat(mcv) : undefined,
+          mch: mch ? parseFloat(mch) : undefined,
+          mchc: mchc ? parseFloat(mchc) : undefined,
+          platelets: plt ? parseInt(plt) : undefined,
+          neutrophils: neut ? parseFloat(neut) : undefined,
+          lymphocytes: lymph ? parseFloat(lymph) : undefined,
+          interpretation: haemInterpretation || undefined
+        } : undefined,
+        malariaSmear: request.request_details.tests.thinBloodSmear ? malariaSmear : undefined,
+        malariaParasitaemia: request.request_details.tests.thinBloodSmear && malariaSmear !== 'Negative' ? malariaParasitaemia : undefined,
+        mrdtResult: request.request_details.tests.mrdt ? mrdtResult : undefined,
+        mrdtAntigen: request.request_details.tests.mrdt && mrdtResult === 'Positive' ? mrdtAntigen : undefined,
+        comment
+      };
+      onSubmit(haemResults);
+    } else if (request.type === 'Chemistry') {
+      const chemResults: ChemistryResults = {
+        labSerialNumber,
+        dateReceived,
+        performedBy,
+        kft: request.request_details.tests.kft ? {
+          urea: urea ? parseFloat(urea) : undefined,
+          creatinine: creatinine ? parseFloat(creatinine) : undefined,
+          egfr: egfr ? parseFloat(egfr) : undefined,
+          sodiumNa: sodium ? parseFloat(sodium) : undefined,
+          potassiumK: potassium ? parseFloat(potassium) : undefined,
+          chloride: chloride ? parseFloat(chloride) : undefined
+        } : undefined,
+        lft: request.request_details.tests.lft ? {
+          alt: alt ? parseFloat(alt) : undefined,
+          ast: ast ? parseFloat(ast) : undefined,
+          alp: alp ? parseFloat(alp) : undefined,
+          ggt: ggt ? parseFloat(ggt) : undefined,
+          totalBilirubin: totalBilirubin ? parseFloat(totalBilirubin) : undefined,
+          directBilirubin: directBilirubin ? parseFloat(directBilirubin) : undefined,
+          totalProtein: totalProtein ? parseFloat(totalProtein) : undefined,
+          albumin: albumin ? parseFloat(albumin) : undefined
+        } : undefined,
+        lipids: request.request_details.tests.lipidProfile ? {
+          totalCholesterol: chol ? parseFloat(chol) : undefined,
+          ldl: ldl ? parseFloat(ldl) : undefined,
+          hdl: hdl ? parseFloat(hdl) : undefined,
+          triglycerides: trig ? parseFloat(trig) : undefined
+        } : undefined,
+        hpylori: request.request_details.tests.hpylori ? {
+          method: hpMethod,
+          result: hpResult
+        } : undefined,
+        comment
+      };
+      onSubmit(chemResults);
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
     <div className="lims-form-container fade-in">
-      <div className={`form-header-bar ${isTb ? 'tb-theme' : 'hiv-theme'}`}>
-        <h2>Upload Laboratory Results</h2>
-        <div className="patient-meta">
-          <span>Patient: <strong>{request.patient_name}</strong></span>
-          <span>ID: <strong>{request.patient_id}</strong></span>
-          <span>Request ID: <strong>{request.id}</strong></span>
+      <div className={`form-header-bar ${request.type.toLowerCase()}-theme`}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+          <div>
+            <h2>Upload Laboratory Results</h2>
+            <div className="patient-meta">
+              <span>Patient: <strong>{request.patient_name}</strong></span>
+              <span>ID: <strong>{request.patient_id}</strong></span>
+              <span>Request ID: <strong>{request.id}</strong></span>
+            </div>
+          </div>
+          <button type="button" className="btn-secondary" onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Printer size={15} /> Print View
+          </button>
         </div>
       </div>
 
       <form onSubmit={handleFormSubmit} className="lims-form">
-        
-        {/* Core Sample Receipt Data */}
+
+        {/* Specimen Receipt Logs */}
         <div className="form-section">
           <h3 className="section-title">
-            <FlaskConical size={18} className={isTb ? 'tb-icon' : 'hiv-icon'} />
+            <FlaskConical size={18} />
             <span>1. Specimen Receipt Logs</span>
           </h3>
 
@@ -202,39 +317,39 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
               <input type="date" value={dateReceived} onChange={e => setDateReceived(e.target.value)} required />
             </div>
 
-            {isTb ? (
-              <>
-                <div className="input-group">
-                  <label>Macroscopic Appearance</label>
-                  <select value={macroscopic} onChange={e => setMacroscopic(e.target.value as any)}>
-                    <option value="Muco-purulent">Muco-purulent</option>
-                    <option value="Blood-stained">Blood-stained</option>
-                    <option value="Saliva">Saliva</option>
-                    <option value="Other">Other Appearance</option>
-                  </select>
-                </div>
-                {macroscopic === 'Other' && (
-                  <div className="input-group animate-slide-in">
-                    <label>Specify Appearance</label>
-                    <input type="text" value={macroscopicOther} onChange={e => setMacroscopicOther(e.target.value)} />
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="input-group">
-                <label>Date Processed</label>
-                <input type="date" value={dateProcessed} onChange={e => setDateProcessed(e.target.value)} required />
-              </div>
-            )}
+            <div className="input-group">
+              <label>Analyst / Tech Email</label>
+              <input type="text" value={performedBy} onChange={e => setPerformedBy(e.target.value)} required />
+            </div>
           </div>
         </div>
 
         {/* ==========================================
             TB RESULT ENTRY FIELDS
             ========================================== */}
-        {isTb && (
+        {request.type === 'TB' && (
           <>
-            {/* Microscopy results */}
+            <div className="form-section">
+              <h4 className="section-title-sub">Macroscopic Examination</h4>
+              <div className="form-grid">
+                <div className="input-group">
+                  <label>Appearance of Sputum</label>
+                  <select value={macroscopic} onChange={e => setMacroscopic(e.target.value as any)}>
+                    <option value="Muco-purulent">Muco-purulent</option>
+                    <option value="Blood-stained">Blood-stained</option>
+                    <option value="Saliva">Saliva</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                {macroscopic === 'Other' && (
+                  <div className="input-group">
+                    <label>Specify Appearance</label>
+                    <input type="text" placeholder="Specify macroscopic appearance" value={macroscopicOther} onChange={e => setMacroscopicOther(e.target.value)} />
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="form-section">
               <h4 className="section-title-sub">Ziehl-Neelsen / Fluorescence Microscopy</h4>
               <div className="form-grid">
@@ -247,203 +362,158 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
                   <input type="text" value={examinedBy} onChange={e => setExaminedBy(e.target.value)} />
                 </div>
 
-                {/* Sample 1 */}
-                <div className="micro-row full-width">
-                  <div className="sample-label">Sputum Sample 1</div>
-                  <div className="sample-inputs">
-                    <select value={microResult1} onChange={e => setMicroResult1(e.target.value as any)}>
-                      <option value="Not Done">Not Done</option>
-                      <option value="Negative">Negative</option>
-                      <option value="Positive">Positive</option>
-                    </select>
-
-                    {microResult1 === 'Positive' && (
-                      <div className="positive-grading-box animate-slide-in">
-                        <select value={microGrading1} onChange={e => setMicroGrading1(e.target.value as any)}>
+                <div className="micro-row full-width" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div className="sample-label" style={{ minWidth: 120, fontWeight: 600 }}>Sputum Sample 1</div>
+                    <div className="sample-inputs" style={{ display: 'flex', gap: 10, flex: 1 }}>
+                      <select value={microResult1} onChange={e => setMicroResult1(e.target.value as any)} style={{ flex: 1 }}>
+                        <option value="Not Done">Not Done</option>
+                        <option value="Negative">Negative</option>
+                        <option value="Positive">Positive</option>
+                      </select>
+                      {microResult1 === 'Positive' && (
+                        <select value={microGrading1} onChange={e => setMicroGrading1(e.target.value as any)} style={{ flex: 1 }}>
                           <option value="1+">1+</option>
                           <option value="2+">2+</option>
                           <option value="3+">3+</option>
                           <option value="Actual number">Actual number</option>
                         </select>
-                        {microGrading1 === 'Actual number' && (
-                          <input type="number" placeholder="Count" value={microActual1} onChange={e => setMicroActual1(e.target.value)} />
-                        )}
-                      </div>
-                    )}
+                      )}
+                      {microResult1 === 'Positive' && microGrading1 === 'Actual number' && (
+                        <input type="number" placeholder="Enter actual count" value={microActual1} onChange={e => setMicroActual1(e.target.value)} style={{ flex: 1 }} />
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Sample 2 */}
-                <div className="micro-row full-width">
-                  <div className="sample-label">Sputum Sample 2</div>
-                  <div className="sample-inputs">
-                    <select value={microResult2} onChange={e => setMicroResult2(e.target.value as any)}>
-                      <option value="Not Done">Not Done</option>
-                      <option value="Negative">Negative</option>
-                      <option value="Positive">Positive</option>
-                    </select>
-
-                    {microResult2 === 'Positive' && (
-                      <div className="positive-grading-box animate-slide-in">
-                        <select value={microGrading2} onChange={e => setMicroGrading2(e.target.value as any)}>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div className="sample-label" style={{ minWidth: 120, fontWeight: 600 }}>Sputum Sample 2</div>
+                    <div className="sample-inputs" style={{ display: 'flex', gap: 10, flex: 1 }}>
+                      <select value={microResult2} onChange={e => setMicroResult2(e.target.value as any)} style={{ flex: 1 }}>
+                        <option value="Not Done">Not Done</option>
+                        <option value="Negative">Negative</option>
+                        <option value="Positive">Positive</option>
+                      </select>
+                      {microResult2 === 'Positive' && (
+                        <select value={microGrading2} onChange={e => setMicroGrading2(e.target.value as any)} style={{ flex: 1 }}>
                           <option value="1+">1+</option>
                           <option value="2+">2+</option>
                           <option value="3+">3+</option>
                           <option value="Actual number">Actual number</option>
                         </select>
-                        {microGrading2 === 'Actual number' && (
-                          <input type="number" placeholder="Count" value={microActual2} onChange={e => setMicroActual2(e.target.value)} />
-                        )}
-                      </div>
-                    )}
+                      )}
+                      {microResult2 === 'Positive' && microGrading2 === 'Actual number' && (
+                        <input type="number" placeholder="Enter actual count" value={microActual2} onChange={e => setMicroActual2(e.target.value)} style={{ flex: 1 }} />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* GeneXpert / Truenat results */}
             <div className="form-section">
               <h4 className="section-title-sub">GeneXpert / Truenat Assay</h4>
               <div className="form-grid">
                 <div className="input-group">
-                  <label>Assay Date</label>
+                  <label>GeneXpert Analysis Date</label>
                   <input type="date" value={geneXpertDate} onChange={e => setGeneXpertDate(e.target.value)} />
                 </div>
                 <div className="input-group">
-                  <label>Assay Technology</label>
-                  <div className="toggle-pill-group">
-                    <button type="button" className={`toggle-pill ${geneXpertType === 'Xpert Ultra' ? 'active' : ''}`} onClick={() => setGeneXpertType('Xpert Ultra')}>Xpert Ultra</button>
-                    <button type="button" className={`toggle-pill ${geneXpertType === 'Truenat' ? 'active' : ''}`} onClick={() => setGeneXpertType('Truenat')}>Truenat</button>
-                  </div>
+                  <label>Assay Platform</label>
+                  <select value={geneXpertType} onChange={e => setGeneXpertType(e.target.value as any)}>
+                    <option value="Xpert Ultra">Xpert Ultra</option>
+                    <option value="Truenat">Truenat</option>
+                  </select>
                 </div>
                 <div className="input-group full-width">
-                  <label>Assay Result</label>
-                  <select 
-                    value={geneXpertResult} 
-                    onChange={e => setGeneXpertResult(e.target.value as any)}
-                    className={geneXpertResult?.includes('RIF resistant detected') ? 'select-danger' : (geneXpertResult?.includes('detected') ? 'select-warning' : '')}
-                  >
+                  <label>GeneXpert Result</label>
+                  <select value={geneXpertResult} onChange={e => setGeneXpertResult(e.target.value as any)}>
                     <option value="MTB not detected">MTB not detected</option>
                     <option value="MTB detected">MTB detected (Rifampicin resistance NOT detected)</option>
-                    <option value="MTB detected Trace">MTB detected Trace (Rifampicin resistance Indeterminate/Trace)</option>
-                    <option value="RIF resistant detected">🚨 MTB detected (RIF RESISTANCE DETECTED)</option>
-                    <option value="No result">No result</option>
+                    <option value="RIF resistant detected">MTB detected (RIF RESISTANCE DETECTED)</option>
                     <option value="Error">Error</option>
-                    <option value="Invalid">Invalid</option>
                   </select>
                 </div>
               </div>
-            </div>
-
-            {/* Reflex Test XDR (Triggered or Manual Expand) */}
-            <div className={`form-section reflex-section ${rifResistantDetected ? 'highlighted' : ''}`}>
-              <div className="section-header-row">
-                <h4 className="section-title-sub">Reflex Testing results (XDR)</h4>
-                {!rifResistantDetected && (
-                  <button type="button" className="btn-small-toggle" onClick={() => setShowXdrSection(!showXdrSection)}>
-                    {showXdrSection ? 'Hide XDR' : 'Manually Enter XDR'}
-                  </button>
-                )}
-              </div>
 
               {rifResistantDetected && (
-                <div className="alert-message danger">
-                  <AlertTriangle size={16} />
-                  <span>Rifampicin Resistance detected. Reflex XDR testing is clinically mandated.</span>
+                <div style={{ marginTop: 16, padding: 12, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 8, color: '#ef4444', fontWeight: 600, fontSize: '.9rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  ⚠️ RIF RESISTANCE DETECTED: Automated reflex testing for second-line drugs (XDR) initiated.
                 </div>
               )}
+            </div>
 
-              {showXdrSection && (
-                <div className="form-grid animate-slide-in">
+            {showXdrSection && (
+              <div className="form-section reflex-xdr-section" style={{ borderLeft: '3px solid #ef4444', paddingLeft: 16 }}>
+                <h4 className="section-title-sub" style={{ color: '#ef4444' }}>Second-Line Drug Susceptibility Reflex Assay (XDR)</h4>
+                <div className="form-grid">
                   <div className="input-group">
                     <label>Reflex Testing Date</label>
                     <input type="date" value={xdrDate} onChange={e => setXdrDate(e.target.value)} />
                   </div>
-                  <div style={{ display: 'none' }}></div> {/* spacer */}
-
-                  <div className="drug-row">
-                    <span className="drug-label">Isoniazid (INH)</span>
-                    <div className="pill-selector">
-                      {['Not Done', 'Susceptible', 'Resistant'].map(res => (
-                        <button type="button" key={res} className={`pill-opt ${resIsoniazid === res ? 'active' : ''}`} onClick={() => setResIsoniazid(res as any)}>
-                          {res}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="drug-row">
-                    <span className="drug-label">Ethionamide (ETH)</span>
-                    <div className="pill-selector">
-                      {['Not Done', 'Susceptible', 'Resistant'].map(res => (
-                        <button type="button" key={res} className={`pill-opt ${resEthionamide === res ? 'active' : ''}`} onClick={() => setResEthionamide(res as any)}>
-                          {res}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="drug-row">
-                    <span className="drug-label">Moxifloxacin (MXF)</span>
-                    <div className="pill-selector">
-                      {['Not Done', 'Susceptible', 'Resistant'].map(res => (
-                        <button type="button" key={res} className={`pill-opt ${resMoxifloxacin === res ? 'active' : ''}`} onClick={() => setResMoxifloxacin(res as any)}>
-                          {res}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="drug-row">
-                    <span className="drug-label">Levofloxacin (LFX)</span>
-                    <div className="pill-selector">
-                      {['Not Done', 'Susceptible', 'Resistant'].map(res => (
-                        <button type="button" key={res} className={`pill-opt ${resLevofloxacin === res ? 'active' : ''}`} onClick={() => setResLevofloxacin(res as any)}>
-                          {res}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Urine LAM */}
-            {request.type === 'TB' && request.request_details.examinations?.urineLam && (
-              <div className="form-section animate-slide-in">
-                <h4 className="section-title-sub">Urine LAM Assay</h4>
-                <div className="form-grid">
                   <div className="input-group">
-                    <label>Urine LAM Run Date</label>
-                    <input type="date" value={urineLamDate} onChange={e => setUrineLamDate(e.target.value)} />
-                  </div>
-                  <div className="input-group">
-                    <label>Urine LAM Result</label>
-                    <select 
-                      value={urineLamResult} 
-                      onChange={e => setUrineLamResult(e.target.value as any)}
-                      className={urineLamResult === 'Positive' ? 'select-warning' : ''}
-                    >
+                    <label>Isoniazid (INH)</label>
+                    <select value={resIsoniazid} onChange={e => setResIsoniazid(e.target.value as any)}>
                       <option value="Not Done">Not Done</option>
-                      <option value="Negative">Negative</option>
-                      <option value="Positive">Positive</option>
+                      <option value="Susceptible">Susceptible</option>
+                      <option value="Resistant">Resistant</option>
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Ethionamide (Eto)</label>
+                    <select value={resEthionamide} onChange={e => setResEthionamide(e.target.value as any)}>
+                      <option value="Not Done">Not Done</option>
+                      <option value="Susceptible">Susceptible</option>
+                      <option value="Resistant">Resistant</option>
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Moxifloxacin (Mfx)</label>
+                    <select value={resMoxifloxacin} onChange={e => setResMoxifloxacin(e.target.value as any)}>
+                      <option value="Not Done">Not Done</option>
+                      <option value="Susceptible">Susceptible</option>
+                      <option value="Resistant">Resistant</option>
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Levofloxacin (Lfx)</label>
+                    <select value={resLevofloxacin} onChange={e => setResLevofloxacin(e.target.value as any)}>
+                      <option value="Not Done">Not Done</option>
+                      <option value="Susceptible">Susceptible</option>
+                      <option value="Resistant">Resistant</option>
                     </select>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Review Info */}
             <div className="form-section">
-              <h4 className="section-title-sub">Review & Sign Off</h4>
+              <h4 className="section-title-sub">Urine Lipoarabinomannan (Urine LAM)</h4>
               <div className="form-grid">
                 <div className="input-group">
-                  <label>Results Reviewed By</label>
-                  <input type="text" value={reviewedBy} onChange={e => setReviewedBy(e.target.value)} required />
+                  <label>Urine LAM Analysis Date</label>
+                  <input type="date" value={urineLamDate} onChange={e => setUrineLamDate(e.target.value)} />
                 </div>
                 <div className="input-group">
-                  <label>Review Date</label>
-                  <input type="date" value={reviewedDate} onChange={e => setReviewedDate(e.target.value)} required />
+                  <label>Urine LAM Result</label>
+                  <select value={urineLamResult} onChange={e => setUrineLamResult(e.target.value as any)}>
+                    <option value="Not Done">Not Done</option>
+                    <option value="Negative">Negative</option>
+                    <option value="Positive">Positive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-section">
+              <h4 className="section-title-sub">Result Verification & Sign-off</h4>
+              <div className="form-grid">
+                <div className="input-group">
+                  <label>Reviewed / Validated By</label>
+                  <input type="text" value={reviewedBy} onChange={e => setReviewedBy(e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label>Verification Date</label>
+                  <input type="date" value={reviewedDate} onChange={e => setReviewedDate(e.target.value)} />
                 </div>
               </div>
             </div>
@@ -453,116 +523,312 @@ export default function ResultEntryForm({ request, onSubmit, onCancel }: ResultE
         {/* ==========================================
             HIV RESULT ENTRY FIELDS
             ========================================== */}
-        {!isTb && (
+        {request.type === 'HIV' && (
           <div className="form-section">
-            <h3 className="section-title">
-              <Award size={18} className="hiv-icon" />
-              <span>2. HIV Test Results Entry</span>
-            </h3>
+            <h3 className="section-title"><Award size={18} /><span>2. HIV Test Results</span></h3>
+
+            <div className="form-grid" style={{ marginBottom: 20 }}>
+              <div className="input-group">
+                <label>Date Processed</label>
+                <input type="date" value={dateProcessed} onChange={e => setDateProcessed(e.target.value)} required />
+              </div>
+            </div>
 
             {request.sub_type === 'EID' ? (
-              /* EID Results */
-              <div className="form-grid animate-slide-in">
+              <div className="form-grid">
                 <div className="input-group full-width">
                   <label>DNA-PCR Result</label>
-                  <div className="radio-pill-group">
-                    <label className={`radio-pill ${eidDnaPcrResult === 'Negative' ? 'active' : ''}`}>
-                      <input type="radio" value="Negative" checked={eidDnaPcrResult === 'Negative'} onChange={() => setEidDnaPcrResult('Negative')} />
-                      Negative
-                    </label>
-                    <label className={`radio-pill ${eidDnaPcrResult === 'Positive' ? 'active alert-danger-pill' : ''}`}>
-                      <input type="radio" value="Positive" checked={eidDnaPcrResult === 'Positive'} onChange={() => setEidDnaPcrResult('Positive')} />
-                      Positive
-                    </label>
-                    <label className={`radio-pill ${eidDnaPcrResult === 'Inconclusive' ? 'active alert-warning-pill' : ''}`}>
-                      <input type="radio" value="Inconclusive" checked={eidDnaPcrResult === 'Inconclusive'} onChange={() => setEidDnaPcrResult('Inconclusive')} />
-                      Inconclusive
-                    </label>
-                  </div>
+                  <select value={eidDnaPcrResult} onChange={e => setEidDnaPcrResult(e.target.value as any)}>
+                    <option value="Negative">Negative</option>
+                    <option value="Positive">Positive</option>
+                    <option value="Inconclusive">Inconclusive</option>
+                  </select>
                 </div>
               </div>
             ) : (
-              /* Viral Load Results */
-              <div className="form-grid animate-slide-in">
-                <div className="input-group full-width">
-                  <label>Viral Load Measurement</label>
-                  <div className="toggle-pill-group">
-                    <button 
-                      type="button" 
-                      className={`toggle-pill ${vlValueType === 'Numerical' ? 'active' : ''}`}
-                      onClick={() => setVlValueType('Numerical')}
-                    >
-                      Numerical Copy Count
-                    </button>
-                    <button 
-                      type="button" 
-                      className={`toggle-pill ${vlValueType === 'Undetectable' ? 'active' : ''}`}
-                      onClick={() => setVlValueType('Undetectable')}
-                    >
-                      Target Not Detected (&lt; 20 copies)
-                    </button>
-                  </div>
+              <div className="form-grid">
+                <div className="input-group">
+                  <label>Viral Load Result Type</label>
+                  <select value={vlValueType} onChange={e => setVlValueType(e.target.value as any)}>
+                    <option value="Numerical">Numerical Value</option>
+                    <option value="Undetectable">Undetectable (&lt; 20 copies/mL)</option>
+                  </select>
                 </div>
-
                 {vlValueType === 'Numerical' ? (
                   <>
-                    <div className="input-group animate-slide-in">
-                      <label>VL Copy Count (copies/mL)</label>
-                      <input 
-                        type="number" 
-                        value={vlCopies} 
-                        onChange={e => setVlCopies(e.target.value)} 
-                        required={vlValueType === 'Numerical'}
-                      />
+                    <div className="input-group">
+                      <label>Viral Load copies/mL</label>
+                      <input type="number" value={vlCopies} onChange={e => setVlCopies(e.target.value)} required />
                     </div>
-                    <div className="input-group calculator-read-only animate-slide-in">
-                      <label>
-                        <Calculator size={14} style={{ marginRight: '6px' }} />
-                        Calculated Log10 Value
-                      </label>
-                      <input type="text" value={vlLog} readOnly className="read-only-input" />
+                    <div className="input-group">
+                      <label>Calculated Log10</label>
+                      <input type="text" value={vlLog} readOnly />
                     </div>
                   </>
                 ) : (
-                  <div className="full-width alert-message success animate-slide-in">
-                    <Check size={16} />
-                    <span>Viral Load suppressed: target undetectable. Clinician will be alerted.</span>
+                  <div className="input-group" style={{ display: 'flex', alignItems: 'center', color: '#10b981', fontWeight: 600, fontSize: '.9rem', padding: '10px 0 0 10px' }}>
+                    🧬 Viral Load is Undetectable (calculated log value is 0.00).
                   </div>
                 )}
               </div>
             )}
-
-            <div className="form-grid" style={{ marginTop: '16px' }}>
-              <div className="input-group">
-                <label>Test Performed By</label>
-                <input type="text" value={performedBy} onChange={e => setPerformedBy(e.target.value)} required />
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Global comment field */}
+        {/* ==========================================
+            HAEMATOLOGY RESULT ENTRY FIELDS
+            ========================================== */}
+        {request.type === 'Haematology' && (
+          <>
+            {request.request_details.tests.fbc && (
+              <div className="form-section">
+                <h4 className="section-title-sub">Full Blood Count (FBC) Parameters</h4>
+                <div className="form-grid">
+                  <div className="input-group">
+                    <label>WBC (10^9 /L)</label>
+                    <input type="number" step="0.1" value={wbc} onChange={e => setWbc(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>RBC (10^12 /L)</label>
+                    <input type="number" step="0.01" value={rbc} onChange={e => setRbc(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Haemoglobin (g/dL)</label>
+                    <input type="number" step="0.1" value={hb} onChange={e => setHb(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Haematocrit (%)</label>
+                    <input type="number" step="0.1" value={hct} onChange={e => setHct(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>MCV (fL)</label>
+                    <input type="number" step="0.1" value={mcv} onChange={e => setMcv(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>MCH (pg)</label>
+                    <input type="number" step="0.1" value={mch} onChange={e => setMch(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>MCHC (g/dL)</label>
+                    <input type="number" step="0.1" value={mchc} onChange={e => setMchc(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Platelets (10^9 /L)</label>
+                    <input type="number" value={plt} onChange={e => setPlt(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Neutrophils (%)</label>
+                    <input type="number" step="0.1" value={neut} onChange={e => setNeut(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Lymphocytes (%)</label>
+                    <input type="number" step="0.1" value={lymph} onChange={e => setLymph(e.target.value)} />
+                  </div>
+                  <div className="input-group full-width">
+                    <label>Haematological Interpretation</label>
+                    <input type="text" placeholder="e.g. Mild microcytic hypochromic anaemia" value={haemInterpretation} onChange={e => setHaemInterpretation(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(request.request_details.tests.thinBloodSmear || request.request_details.tests.mrdt) && (
+              <div className="form-section">
+                <h4 className="section-title-sub">Malaria Screening Results</h4>
+                <div className="form-grid">
+                  {request.request_details.tests.thinBloodSmear && (
+                    <>
+                      <div className="input-group">
+                        <label>Thin Blood Smear Smear</label>
+                        <select value={malariaSmear} onChange={e => setMalariaSmear(e.target.value as any)}>
+                          <option value="Negative">Negative</option>
+                          <option value="P. falciparum">P. falciparum</option>
+                          <option value="P. vivax">P. vivax</option>
+                          <option value="Mixed">Mixed infection</option>
+                        </select>
+                      </div>
+                      {malariaSmear !== 'Negative' && (
+                        <div className="input-group">
+                          <label>Parasitaemia Density (e.g. 1+, 2+, Count)</label>
+                          <input type="text" value={malariaParasitaemia} onChange={e => setMalariaParasitaemia(e.target.value)} />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {request.request_details.tests.mrdt && (
+                    <>
+                      <div className="input-group">
+                        <label>Malaria RDT Result</label>
+                        <select value={mrdtResult} onChange={e => setMrdtResult(e.target.value as any)}>
+                          <option value="Negative">Negative</option>
+                          <option value="Positive">Positive</option>
+                          <option value="Invalid">Invalid</option>
+                        </select>
+                      </div>
+                      {mrdtResult === 'Positive' && (
+                        <div className="input-group">
+                          <label>Detected Antigen</label>
+                          <select value={mrdtAntigen} onChange={e => setMrdtAntigen(e.target.value as any)}>
+                            <option value="HRP2 (P. falciparum)">HRP2 (P. falciparum)</option>
+                            <option value="pLDH (Pan)">pLDH (Pan)</option>
+                          </select>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ==========================================
+            CHEMISTRY RESULT ENTRY FIELDS
+            ========================================== */}
+        {request.type === 'Chemistry' && (
+          <>
+            {request.request_details.tests.kft && (
+              <div className="form-section">
+                <h4 className="section-title-sub">Kidney Function Panels (KFT)</h4>
+                <div className="form-grid">
+                  <div className="input-group">
+                    <label>Urea (mmol/L)</label>
+                    <input type="number" step="0.1" value={urea} onChange={e => setUrea(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Creatinine (µmol/L)</label>
+                    <input type="number" value={creatinine} onChange={e => setCreatinine(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>eGFR (mL/min/1.73m²)</label>
+                    <input type="number" value={egfr} onChange={e => setEgfr(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Sodium (Na⁺) (mmol/L)</label>
+                    <input type="number" value={sodium} onChange={e => setSodium(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Potassium (K⁺) (mmol/L)</label>
+                    <input type="number" step="0.1" value={potassium} onChange={e => setPotassium(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Chloride (Cl⁻) (mmol/L)</label>
+                    <input type="number" value={chloride} onChange={e => setChloride(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {request.request_details.tests.lft && (
+              <div className="form-section">
+                <h4 className="section-title-sub">Liver Function Panels (LFT)</h4>
+                <div className="form-grid">
+                  <div className="input-group">
+                    <label>ALT (SGPT) (U/L)</label>
+                    <input type="number" value={alt} onChange={e => setAlt(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>AST (SGOT) (U/L)</label>
+                    <input type="number" value={ast} onChange={e => setAst(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Alkaline Phosphatase (ALP) (U/L)</label>
+                    <input type="number" value={alp} onChange={e => setAlp(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>GGT (U/L)</label>
+                    <input type="number" value={ggt} onChange={e => setGgt(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Total Bilirubin (µmol/L)</label>
+                    <input type="number" value={totalBilirubin} onChange={e => setTotalBilirubin(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Direct Bilirubin (µmol/L)</label>
+                    <input type="number" value={directBilirubin} onChange={e => setDirectBilirubin(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Total Protein (g/L)</label>
+                    <input type="number" value={totalProtein} onChange={e => setTotalProtein(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Albumin (g/L)</label>
+                    <input type="number" value={albumin} onChange={e => setAlbumin(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {request.request_details.tests.lipidProfile && (
+              <div className="form-section">
+                <h4 className="section-title-sub">Lipid Profile Panels</h4>
+                <div className="form-grid">
+                  <div className="input-group">
+                    <label>Total Cholesterol (mmol/L)</label>
+                    <input type="number" step="0.1" value={chol} onChange={e => setChol(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>LDL Cholesterol (mmol/L)</label>
+                    <input type="number" step="0.1" value={ldl} onChange={e => setLdl(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>HDL Cholesterol (mmol/L)</label>
+                    <input type="number" step="0.1" value={hdl} onChange={e => setHdl(e.target.value)} />
+                  </div>
+                  <div className="input-group">
+                    <label>Triglycerides (mmol/L)</label>
+                    <input type="number" step="0.1" value={trig} onChange={e => setTrig(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {request.request_details.tests.hpylori && (
+              <div className="form-section">
+                <h4 className="section-title-sub">H. pylori Screening</h4>
+                <div className="form-grid">
+                  <div className="input-group">
+                    <label>Method</label>
+                    <select value={hpMethod} onChange={e => setHpMethod(e.target.value as any)}>
+                      <option value="Rapid Antigen (Stool)">Rapid Antigen (Stool)</option>
+                      <option value="Serology (IgG)">Serology (IgG)</option>
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Result</label>
+                    <select value={hpResult} onChange={e => setHpResult(e.target.value as any)}>
+                      <option value="Negative">Negative</option>
+                      <option value="Positive">Positive</option>
+                      <option value="Invalid">Invalid</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         <div className="form-section">
           <h3 className="section-title">
-            <BookOpen size={18} className={isTb ? 'tb-icon' : 'hiv-icon'} />
+            <BookOpen size={18} />
             <span>Comment & Notes</span>
           </h3>
           <div className="input-group full-width">
-            <textarea 
-              rows={3} 
-              placeholder="Enter lab observations, recommendations, or note sample quality issues." 
+            <textarea
+              rows={3}
+              placeholder="Enter lab observations, recommendations, or note sample quality issues."
               value={comment}
               onChange={e => setComment(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Actions */}
         <div className="form-actions">
           <button type="button" className="btn-secondary" onClick={onCancel}>
             Cancel
           </button>
-          <button type="submit" className={`btn-primary ${isTb ? 'tb-theme' : 'hiv-theme'}`}>
+          <button type="submit" className={`btn-primary ${request.type.toLowerCase()}-theme`}>
             Submit Lab Results
           </button>
         </div>

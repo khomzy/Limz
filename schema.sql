@@ -1,104 +1,165 @@
--- ==========================================
--- Zingwangwa Hospital LIMS Supabase Schema
--- ==========================================
+-- Medicy LIMS schema for Supabase
+-- Run in the Supabase SQL editor as the project owner.
+-- Authorization uses auth.users.raw_app_meta_data (available as app_metadata in JWTs).
 
--- Drop table if exists (for re-initialization if needed)
--- DROP TABLE IF EXISTS lims_requests;
-
-CREATE TABLE IF NOT EXISTS lims_requests (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    type VARCHAR(10) NOT NULL CHECK (type IN ('TB', 'HIV')),
-    sub_type VARCHAR(50) NOT NULL, -- e.g., 'GeneXpert Ultra', 'GeneXpert XDR', 'Urine LAM', 'Microscopy', 'Viral Load', 'EID'
-    status VARCHAR(30) NOT NULL DEFAULT 'Pending Sample' CHECK (status IN ('Pending Sample', 'Sample Received', 'Testing', 'Completed')),
-    clinician_email VARCHAR(255) NOT NULL, -- The requesting clinician's email (e.g. clinitian@zg.com, tb@zg.com)
-    patient_name VARCHAR(255) NOT NULL,
-    patient_id VARCHAR(100), -- ART number for HIV, TB treatment register number for TB, etc.
-    patient_phone VARCHAR(50), -- Clinician/Guardian phone for SMS notification
-    
-    -- Structured JSON payloads for rich forms
-    patient_details JSONB NOT NULL DEFAULT '{}'::jsonb,
-    request_details JSONB NOT NULL DEFAULT '{}'::jsonb,
-    sample_details JSONB NOT NULL DEFAULT '{}'::jsonb,
-    results JSONB NOT NULL DEFAULT '{}'::jsonb,
-    
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    results_uploaded_at TIMESTAMP WITH TIME ZONE,
-    results_uploaded_by VARCHAR(255)
+create table if not exists public.lims_requests (
+  id uuid primary key default gen_random_uuid(),
+  type varchar(20) not null,
+  sub_type varchar(100) not null,
+  status varchar(30) not null default 'Pending Sample',
+  department varchar(30) not null default 'Molecular',
+  facility_id varchar(50),
+  facility varchar(255),
+  created_by uuid references auth.users(id) on delete set null,
+  clinician_email varchar(255) not null,
+  patient_name varchar(255) not null,
+  patient_id varchar(100),
+  patient_phone varchar(50),
+  patient_details jsonb not null default '{}'::jsonb,
+  request_details jsonb not null default '{}'::jsonb,
+  sample_details jsonb not null default '{}'::jsonb,
+  results jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  results_uploaded_at timestamptz,
+  results_uploaded_by varchar(255)
 );
 
--- Indices for rapid querying and search
-CREATE INDEX IF NOT EXISTS idx_lims_requests_type ON lims_requests(type);
-CREATE INDEX IF NOT EXISTS idx_lims_requests_status ON lims_requests(status);
-CREATE INDEX IF NOT EXISTS idx_lims_requests_clinician ON lims_requests(clinician_email);
-CREATE INDEX IF NOT EXISTS idx_lims_requests_patient_name ON lims_requests(patient_name);
-CREATE INDEX IF NOT EXISTS idx_lims_requests_patient_id ON lims_requests(patient_id);
+-- Safe upgrades for projects created from the original TB/HIV-only schema.
+alter table public.lims_requests add column if not exists department varchar(30) default 'Molecular';
+alter table public.lims_requests add column if not exists facility_id varchar(50);
+alter table public.lims_requests add column if not exists facility varchar(255);
+alter table public.lims_requests add column if not exists created_by uuid references auth.users(id) on delete set null;
+alter table public.lims_requests alter column type type varchar(20);
+alter table public.lims_requests alter column sub_type type varchar(100);
 
--- Trigger to automatically update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = timezone('utc'::text, now());
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+update public.lims_requests
+set department = case
+  when type = 'Haematology' then 'Haematology'
+  when type = 'Chemistry' then 'Chemistry'
+  else 'Molecular'
+end
+where department is null;
 
-CREATE TRIGGER update_lims_requests_updated_at
-    BEFORE UPDATE ON lims_requests
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+-- Legacy Zingwangwa rows predate facility isolation. Assign them before enforcing it.
+update public.lims_requests set facility_id = 'ZCH001' where facility_id is null;
 
--- ==========================================
--- ROW-LEVEL SECURITY (RLS) POLICIES
--- ==========================================
-ALTER TABLE lims_requests ENABLE ROW LEVEL SECURITY;
+alter table public.lims_requests alter column department set not null;
+alter table public.lims_requests alter column facility_id set not null;
 
--- 1. Clinicians can create request records
-CREATE POLICY "Clinicians can insert requests" ON lims_requests
-    FOR INSERT
-    WITH CHECK (true); -- In a production setup, check: auth.role() = 'authenticated'
+alter table public.lims_requests drop constraint if exists lims_requests_type_check;
+alter table public.lims_requests add constraint lims_requests_type_check
+  check (type in ('TB', 'HIV', 'Haematology', 'Chemistry'));
 
--- 2. Clinicians can view requests they or their department submitted
-CREATE POLICY "Clinicians can view their own requests" ON lims_requests
-    FOR SELECT
-    USING (
-        -- Clinicians can see requests from their own email or general department matching
-        clinician_email = auth.jwt() ->> 'email'
-        OR (auth.jwt() ->> 'email' = 'clinitian@zg.com' AND clinician_email LIKE '%zg.com')
-        OR (auth.jwt() ->> 'email' = 'tb@zg.com' AND clinician_email = 'tb@zg.com')
-        OR (auth.jwt() ->> 'email' = 'moghajoh@gmail.com') -- Lab technicians can see all
-    );
+alter table public.lims_requests drop constraint if exists lims_requests_status_check;
+alter table public.lims_requests add constraint lims_requests_status_check
+  check (status in ('Pending Sample', 'Sample Received', 'Testing', 'Completed'));
 
--- 3. Lab Technicians can view all requests and update status & results
-CREATE POLICY "Lab Technicians have full update access" ON lims_requests
-    FOR UPDATE
-    USING (
-        auth.jwt() ->> 'email' = 'moghajoh@gmail.com' 
-        OR clinician_email = auth.jwt() ->> 'email'
+alter table public.lims_requests drop constraint if exists lims_requests_department_check;
+alter table public.lims_requests add constraint lims_requests_department_check
+  check (department in ('Molecular', 'Haematology', 'Chemistry'));
+
+create index if not exists idx_lims_requests_facility on public.lims_requests(facility_id);
+create index if not exists idx_lims_requests_type on public.lims_requests(type);
+create index if not exists idx_lims_requests_status on public.lims_requests(status);
+create index if not exists idx_lims_requests_clinician on public.lims_requests(clinician_email);
+create index if not exists idx_lims_requests_created_by on public.lims_requests(created_by);
+create index if not exists idx_lims_requests_patient_name on public.lims_requests(patient_name);
+create index if not exists idx_lims_requests_patient_id on public.lims_requests(patient_id);
+
+create or replace function public.set_medicy_updated_at()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  new.updated_at = timezone('utc', now());
+  return new;
+end;
+$$;
+
+drop trigger if exists set_medicy_updated_at on public.lims_requests;
+create trigger set_medicy_updated_at
+before update on public.lims_requests
+for each row execute function public.set_medicy_updated_at();
+
+alter table public.lims_requests enable row level security;
+
+drop policy if exists "Clinicians can insert requests" on public.lims_requests;
+drop policy if exists "Clinicians can view their own requests" on public.lims_requests;
+drop policy if exists "Lab Technicians have full update access" on public.lims_requests;
+drop policy if exists "medicy_select_requests" on public.lims_requests;
+drop policy if exists "medicy_insert_requests" on public.lims_requests;
+drop policy if exists "medicy_lab_update_requests" on public.lims_requests;
+
+create policy "medicy_select_requests"
+on public.lims_requests
+for select
+to authenticated
+using (
+  facility_id = (select auth.jwt() -> 'app_metadata' ->> 'facility_id')
+  and (
+    (select auth.jwt() -> 'app_metadata' ->> 'role') = 'lab'
+    or created_by = (select auth.uid())
+    or clinician_email = (select auth.jwt() ->> 'email')
+    or ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'tb' and type = 'TB')
+    or ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'hiv' and type = 'HIV')
+  )
+);
+
+create policy "medicy_insert_requests"
+on public.lims_requests
+for insert
+to authenticated
+with check (
+  facility_id = (select auth.jwt() -> 'app_metadata' ->> 'facility_id')
+  and created_by = (select auth.uid())
+  and clinician_email = (select auth.jwt() ->> 'email')
+  and (
+    (select auth.jwt() -> 'app_metadata' ->> 'role') = 'lab'
+    or ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'tb' and type = 'TB')
+    or ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'hiv' and type = 'HIV')
+    or (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'clinician'
+      and type in ('Haematology', 'Chemistry')
     )
-    WITH CHECK (true);
+  )
+);
 
--- ==========================================
--- SUPABASE REALTIME
--- ==========================================
--- Enable Supabase Realtime CDC for this table so that the app's
--- postgres_changes subscription receives INSERT / UPDATE / DELETE events.
--- Run this ONCE in the Supabase SQL Editor after creating the table.
-ALTER PUBLICATION supabase_realtime ADD TABLE lims_requests;
+create policy "medicy_lab_update_requests"
+on public.lims_requests
+for update
+to authenticated
+using (
+  facility_id = (select auth.jwt() -> 'app_metadata' ->> 'facility_id')
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'lab'
+)
+with check (
+  facility_id = (select auth.jwt() -> 'app_metadata' ->> 'facility_id')
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'lab'
+);
 
--- ==========================================
--- AFRICASTALKING SMS TRIGGER GUIDELINES
--- ==========================================
-/*
-To deploy a real-time SMS trigger in Supabase:
-1. Create a Supabase Database Webhook or Edge Function that listens for updates to 'lims_requests'.
-2. When the status transitions to 'Completed', extract the patient_name, patient_phone, and lab results summary.
-3. Call the AfricasTalking SMS API using your API credentials:
-   
-   - API Endpoint: https://api.africastalking.com/version1/messaging
-   - Header: apiKey: YOUR_AFRICASTALKING_API_KEY
-   - POST Parameters:
-       username: YOUR_USERNAME (typically 'sandbox' for testing)
-       to: patient_phone (or clinician phone)
-       message: "Zingwangwa LIMS: Results for [Patient Name] are ready. Status: [Results Summary]. Please check your portal."
-*/
+revoke all on table public.lims_requests from anon;
+grant select, insert, update on table public.lims_requests to authenticated;
+grant all on table public.lims_requests to service_role;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'lims_requests'
+  ) then
+    alter publication supabase_realtime add table public.lims_requests;
+  end if;
+end $$;
+
+-- Required app_metadata per user (set with the Supabase Admin API/service role):
+-- {
+--   "role": "lab" | "tb" | "hiv" | "clinician",
+--   "facility_id": "ZCH001",
+--   "facility_name": "Zingwangwa Community Hospital"
+-- }
+-- Never store authorization roles in user_metadata; end users can edit it.

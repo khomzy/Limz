@@ -1,0 +1,299 @@
+.public-site {
+  --public-ink: #12251f;
+  --public-muted: #587068;
+  --public-green: #0b7457;
+  --public-green-dark: #075540;
+  --public-mint: #dff5ec;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: #fbfdfc;
+  color: var(--public-ink);
+}
+
+.public-site button,
+.public-site a { -webkit-tap-highlight-color: transparent; }
+
+.public-nav {
+  width: min(1180px, calc(100% - 40px));
+  min-height: 82px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 36px;
+}
+
+.medicy-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.medicy-brand > span:last-child { display: grid; line-height: 1; }
+.medicy-brand strong { color: var(--public-ink); font: 800 1.35rem/1 var(--font-heading); letter-spacing: -.04em; }
+.medicy-brand small { margin-top: 5px; color: #71857e; font-size: .61rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+
+.medicy-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(145deg, #0c8a66, #07553f);
+  box-shadow: 0 8px 22px rgba(7, 85, 63, .2);
+}
+
+.public-nav-links { margin-left: auto; display: flex; align-items: center; gap: 30px; }
+.public-nav-links a { color: #49635a; font-size: .88rem; font-weight: 650; }
+.public-nav-links a:hover { color: var(--public-green); }
+
+.public-login-button,
+.public-primary-cta {
+  border: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: pointer;
+  font-weight: 750;
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.public-login-button {
+  padding: 11px 18px;
+  color: #fff;
+  background: var(--public-green-dark);
+}
+
+.public-login-button:hover,
+.public-primary-cta:hover { transform: translateY(-2px); box-shadow: 0 13px 30px rgba(7, 85, 63, .2); }
+.public-menu-icon { display: none; color: var(--public-ink); }
+
+.public-hero {
+  width: min(1180px, calc(100% - 40px));
+  min-height: 650px;
+  margin: 20px auto 34px;
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(440px, 1.1fr);
+  align-items: center;
+  gap: 56px;
+}
+
+.public-hero-copy { padding: 46px 0 60px; }
+.public-eyebrow { display: flex; align-items: center; gap: 9px; margin-bottom: 20px; color: var(--public-green); font-size: .76rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.public-eyebrow span { width: 24px; height: 2px; border-radius: 99px; background: #18aa80; }
+.public-hero h1 { max-width: 660px; color: var(--public-ink); font-size: clamp(3rem, 5vw, 5.2rem); line-height: .98; letter-spacing: -.058em; }
+.public-hero-copy > p { max-width: 610px; margin-top: 26px; color: var(--public-muted); font-size: 1.08rem; line-height: 1.75; }
+.public-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; margin-top: 32px; }
+.public-primary-cta { min-height: 51px; padding: 0 23px; color: #fff; background: var(--public-green); }
+.public-secondary-cta { padding: 10px 0; color: var(--public-green-dark); border-bottom: 1px solid #b8d6cc; font-size: .91rem; font-weight: 750; }
+.public-trust-row { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 30px; color: #61766f; font-size: .74rem; font-weight: 650; }
+.public-trust-row span { display: flex; align-items: center; gap: 5px; }
+.public-trust-row svg { color: #0b9a70; }
+
+.public-hero-visual { position: relative; min-height: 545px; }
+.public-hero-visual::before {
+  content: '';
+  position: absolute;
+  inset: 30px -18px -18px 24px;
+  border-radius: 42% 8% 40% 8%;
+  background: #dcefe8;
+}
+.public-hero-visual img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 59% center;
+  border-radius: 18px 70px 18px 70px;
+  box-shadow: 0 35px 70px rgba(20, 62, 48, .19);
+}
+
+.hero-status-card {
+  position: absolute;
+  z-index: 2;
+  min-width: 225px;
+  padding: 13px 15px;
+  border: 1px solid rgba(255,255,255,.7);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 18px 45px rgba(15, 60, 45, .18);
+  backdrop-filter: blur(14px);
+}
+.hero-status-card > svg { margin-left: auto; color: #11a578; }
+.hero-status-card small { display: block; color: #75877f; font-size: .65rem; }
+.hero-status-card strong { display: block; margin-top: 2px; color: #173a2f; font-size: .78rem; }
+.status-icon { width: 35px; height: 35px; border-radius: 10px; display: grid; place-items: center; color: #087454; background: #dff5ec; }
+.status-icon.pink { color: #b53065; background: #fbe3ed; }
+.hero-status-top { top: 32px; left: -33px; }
+.hero-status-bottom { right: -20px; bottom: 34px; }
+
+.public-proof-strip {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 22px 28px;
+  border: 1px solid #e3eee9;
+  border-radius: 15px;
+  display: flex;
+  justify-content: space-between;
+  gap: 22px;
+  color: #60766e;
+  background: #fff;
+  box-shadow: 0 10px 35px rgba(26, 68, 54, .05);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.public-section { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 112px 0; }
+.public-section-heading { max-width: 720px; margin: 0 auto 58px; text-align: center; }
+.public-section-heading > span,
+.callout-label { color: #0c8966; font-size: .72rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.public-section-heading h2,
+.hospital-callout h2 { margin-top: 13px; color: var(--public-ink); font-size: clamp(2.15rem, 4vw, 3.5rem); line-height: 1.08; letter-spacing: -.045em; }
+.public-section-heading p { margin: 19px auto 0; color: var(--public-muted); font-size: 1rem; line-height: 1.75; }
+.public-section-heading.compact { margin-bottom: 45px; }
+
+.workflow-steps { display: grid; grid-template-columns: 1fr 80px 1fr 80px 1fr; align-items: center; }
+.workflow-steps article { position: relative; min-height: 255px; padding: 32px; border: 1px solid #dcebe5; border-radius: 18px; background: #fff; }
+.workflow-steps article > span { position: absolute; top: 23px; right: 25px; color: #b4c9c1; font: 750 .75rem var(--font-heading); }
+.workflow-steps article > svg { color: var(--public-green); }
+.workflow-steps h3 { margin-top: 30px; color: var(--public-ink); font-size: 1.15rem; }
+.workflow-steps p { margin-top: 12px; color: var(--public-muted); font-size: .88rem; line-height: 1.7; }
+.workflow-connector { height: 1px; background: repeating-linear-gradient(90deg, #8db8a8 0 7px, transparent 7px 13px); }
+
+.public-benefits { width: 100%; max-width: none; padding: 105px max(20px, calc((100% - 1120px) / 2)); background: #f0f7f4; }
+.benefit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.benefit-grid article { min-height: 235px; padding: 29px; border: 1px solid #ddebe5; border-radius: 17px; background: rgba(255,255,255,.78); }
+.benefit-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; color: var(--public-green); background: var(--public-mint); }
+.benefit-grid h3 { margin-top: 22px; color: var(--public-ink); font-size: 1rem; }
+.benefit-grid p { margin-top: 10px; color: var(--public-muted); font-size: .84rem; line-height: 1.7; }
+
+.hospital-callout {
+  width: min(1120px, calc(100% - 40px));
+  margin: 105px auto;
+  padding: clamp(38px, 6vw, 72px);
+  border-radius: 27px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 55px;
+  color: #d7eee5;
+  background: linear-gradient(135deg, #063d30, #0a694f);
+  box-shadow: 0 30px 70px rgba(5, 59, 44, .18);
+}
+.hospital-callout > div { max-width: 760px; }
+.hospital-callout-icon { width: 50px; height: 50px; margin-bottom: 26px; border-radius: 14px; display: grid; place-items: center; color: #d8fff0; background: rgba(255,255,255,.1); }
+.hospital-callout .callout-label { color: #86dfbf; }
+.hospital-callout h2 { color: #fff; }
+.hospital-callout p:not(.callout-label) { margin-top: 20px; color: #bdd8ce; line-height: 1.75; }
+.public-primary-cta.light { color: #07523e; background: #fff; white-space: nowrap; }
+
+.public-footer {
+  width: min(1180px, calc(100% - 40px));
+  min-height: 145px;
+  margin: 0 auto;
+  border-top: 1px solid #dfebe6;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 40px;
+  color: #71847d;
+  font-size: .75rem;
+}
+.public-footer p { text-align: center; }
+
+.medicy-login-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 24, 19, .68);
+  backdrop-filter: blur(12px);
+  animation: publicFade .2s ease;
+}
+@keyframes publicFade { from { opacity: 0; } }
+
+.medicy-login-panel {
+  position: relative;
+  width: min(100%, 470px);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 42px;
+  border-radius: 23px;
+  background: #fff;
+  box-shadow: 0 35px 100px rgba(0,0,0,.3);
+  animation: loginRise .28s ease;
+}
+@keyframes loginRise { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+.medicy-login-close { position: absolute; top: 18px; right: 18px; width: 37px; height: 37px; border: 0; border-radius: 10px; display: grid; place-items: center; color: #587068; background: #eef5f2; cursor: pointer; }
+.login-panel-brand { margin-bottom: 25px; }
+.login-panel-kicker { color: var(--public-green); font-size: .69rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.medicy-login-panel h2 { margin-top: 7px; color: var(--public-ink); font-size: 2rem; letter-spacing: -.04em; }
+.login-panel-intro { margin-top: 8px; color: #71847d; font-size: .86rem; }
+.medicy-login-error { margin-top: 18px; padding: 11px 13px; border: 1px solid #fecaca; border-radius: 10px; color: #9f1239; background: #fff1f2; font-size: .78rem; line-height: 1.5; }
+.medicy-login-form { display: grid; margin-top: 24px; }
+.medicy-login-form > label:not(.remember-login) { margin: 14px 0 7px; color: #29473d; font-size: .74rem; font-weight: 750; }
+.medicy-login-form > input { width: 100%; height: 49px; padding: 0 14px; border: 1px solid #ccddd6; border-radius: 10px; outline: 0; color: #173a2f; background: #fbfdfc; font: 500 .88rem var(--font-primary); }
+.medicy-login-form > input:focus { border-color: #20a37c; box-shadow: 0 0 0 3px rgba(32,163,124,.12); }
+.remember-login { margin: 20px 0; display: flex; align-items: flex-start; gap: 10px; color: #29473d; cursor: pointer; }
+.remember-login input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--public-green); }
+.remember-login span { display: grid; }
+.remember-login strong { font-size: .78rem; }
+.remember-login small { margin-top: 2px; color: #7b8d87; font-size: .67rem; }
+.medicy-login-form > button { min-height: 51px; border: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; gap: 9px; color: #fff; background: var(--public-green); font-weight: 800; cursor: pointer; }
+.medicy-login-form > button:disabled { opacity: .65; cursor: wait; }
+.login-support { margin-top: 20px; color: #84958f; font-size: .7rem; text-align: center; }
+
+@media (max-width: 980px) {
+  .public-nav-links { display: none; }
+  .public-login-button { margin-left: auto; }
+  .public-hero { grid-template-columns: 1fr; gap: 10px; }
+  .public-hero-copy { max-width: 780px; padding-bottom: 30px; }
+  .public-hero-visual { min-height: 520px; }
+  .workflow-steps { grid-template-columns: 1fr; gap: 14px; }
+  .workflow-connector { width: 1px; height: 22px; margin: 0 auto; background: repeating-linear-gradient(0deg, #8db8a8 0 7px, transparent 7px 13px); }
+  .benefit-grid { grid-template-columns: repeat(2, 1fr); }
+  .hospital-callout { grid-template-columns: 1fr; align-items: start; }
+  .hospital-callout .public-primary-cta { justify-self: start; }
+  .public-footer { grid-template-columns: 1fr; justify-items: center; gap: 18px; padding: 38px 0; text-align: center; }
+}
+
+@media (max-width: 640px) {
+  .public-nav { width: min(100% - 28px, 1180px); min-height: 72px; }
+  .public-nav .public-login-button { padding: 9px 12px; font-size: .8rem; }
+  .public-hero { width: min(100% - 28px, 1180px); min-height: auto; margin-top: 0; }
+  .public-hero-copy { padding-top: 45px; }
+  .public-hero h1 { font-size: clamp(2.7rem, 14vw, 4rem); }
+  .public-hero-copy > p { font-size: .96rem; }
+  .public-hero-actions { align-items: stretch; flex-direction: column; }
+  .public-secondary-cta { text-align: center; }
+  .public-trust-row { display: grid; }
+  .public-hero-visual { min-height: 410px; }
+  .public-hero-visual img { border-radius: 14px 45px 14px 45px; }
+  .hero-status-card { min-width: 195px; }
+  .hero-status-top { top: 14px; left: -5px; }
+  .hero-status-bottom { right: -5px; bottom: 18px; }
+  .public-proof-strip { width: min(100% - 28px, 1180px); overflow-x: auto; justify-content: flex-start; }
+  .public-proof-strip span { white-space: nowrap; }
+  .public-section { width: min(100% - 28px, 1120px); padding: 80px 0; }
+  .benefit-grid { grid-template-columns: 1fr; }
+  .public-benefits { width: 100%; padding: 80px 14px; }
+  .hospital-callout { width: min(100% - 28px, 1120px); margin: 75px auto; gap: 35px; }
+  .public-footer { width: min(100% - 28px, 1180px); }
+  .medicy-login-overlay { padding: 12px; }
+  .medicy-login-panel { max-height: calc(100vh - 24px); padding: 34px 24px 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-site *, .public-site *::before, .public-site *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
