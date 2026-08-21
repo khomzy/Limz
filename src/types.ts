@@ -1,7 +1,7 @@
 export type LimsStatus = 'Pending Sample' | 'Sample Received' | 'Testing' | 'Completed';
 export type TestType = 'TB' | 'HIV' | 'Haematology' | 'Chemistry';
 export type LimsDepartment = 'Molecular' | 'Haematology' | 'Chemistry';
-export type UserRole = 'lab' | 'clinician' | 'tb' | 'hiv';
+export type UserRole = 'lab' | 'clinician' | 'tb' | 'hiv' | 'admin';
 
 export interface UserSession {
   email: string;

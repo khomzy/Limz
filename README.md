@@ -16,11 +16,13 @@ Create a local `.env` file (never commit it):
 ```text
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
+# Optional: lets staff enter a short username instead of a full work email.
+VITE_MEDICY_USERNAME_DOMAIN=accounts.example.org
 ```
 
 The frontend must receive only a Supabase publishable/anon key. Service-role, secret and Africa's Talking credentials belong in protected server-side configuration.
 
-Without Supabase variables, the app starts in local demonstration mode. Demo facility ID is `ZCH001`; the supported username aliases are `lab`, `tb`, `hiv` and `clinician`. Demo passwords remain in `src/supabaseClient.ts` and must not be treated as production credentials.
+Without Supabase variables, the public website remains available but secure application login is disabled. No patient records or login credentials are embedded in the frontend.
 
 ## Supabase setup
 
@@ -36,7 +38,19 @@ Without Supabase variables, the app starts in local demonstration mode. Demo fac
 }
 ```
 
-Allowed roles are `lab`, `tb`, `hiv` and `clinician`. Never put roles or facility authorization in `user_metadata`, because users can edit that metadata.
+Allowed roles are `admin`, `lab`, `tb`, `hiv` and `clinician`. An `admin` can switch between the laboratory and clinical workspaces; every other account is limited to its own workspace. Never put roles or facility authorization in `user_metadata`, because users can edit that metadata.
+
+For the owner account `ngowelak@gmail.com`, create the user in Supabase Authentication and assign this **app metadata** through the Supabase Dashboard/Admin API:
+
+```json
+{
+  "role": "admin",
+  "facility_id": "YOUR_FACILITY_ID",
+  "facility_name": "Your hospital name"
+}
+```
+
+The project includes `.mcp.json` for Supabase MCP. In Codex, connect the Supabase MCP server and complete its OAuth authorization in the browser; that grants this workspace scoped management access without sharing a service-role key in code or chat.
 
 4. Deploy a protected Supabase Edge Function named `send-result-sms` if result SMS delivery is required. Store the Africa's Talking credentials as Edge Function secrets, not `VITE_` variables.
 5. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub Actions repository secrets.
