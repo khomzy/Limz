@@ -47,7 +47,7 @@ export const supabase = useRealSupabase
   : null;
 
 const isUserRole = (value: unknown): value is UserRole =>
-  value === 'lab' || value === 'clinician' || value === 'tb' || value === 'hiv';
+  value === 'lab' || value === 'clinician' || value === 'tb' || value === 'hiv' || value === 'admin';
 
 const sessionFromSupabaseUser = (user: User): UserSession => {
   const role = user.app_metadata?.role;

@@ -101,6 +101,7 @@ using (
   facility_id = (select auth.jwt() -> 'app_metadata' ->> 'facility_id')
   and (
     (select auth.jwt() -> 'app_metadata' ->> 'role') = 'lab'
+    or (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
     or created_by = (select auth.uid())
     or clinician_email = (select auth.jwt() ->> 'email')
     or ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'tb' and type = 'TB')
@@ -118,6 +119,7 @@ with check (
   and clinician_email = (select auth.jwt() ->> 'email')
   and (
     (select auth.jwt() -> 'app_metadata' ->> 'role') = 'lab'
+    or (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
     or ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'tb' and type = 'TB')
     or ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'hiv' and type = 'HIV')
     or (
@@ -133,11 +135,11 @@ for update
 to authenticated
 using (
   facility_id = (select auth.jwt() -> 'app_metadata' ->> 'facility_id')
-  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'lab'
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') in ('lab', 'admin')
 )
 with check (
   facility_id = (select auth.jwt() -> 'app_metadata' ->> 'facility_id')
-  and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'lab'
+  and (select auth.jwt() -> 'app_metadata' ->> 'role') in ('lab', 'admin')
 );
 
 revoke all on table public.lims_requests from anon;
@@ -158,7 +160,7 @@ end $$;
 
 -- Required app_metadata per user (set with the Supabase Admin API/service role):
 -- {
---   "role": "lab" | "tb" | "hiv" | "clinician",
+--   "role": "admin" | "lab" | "tb" | "hiv" | "clinician",
 --   "facility_id": "ZCH001",
 --   "facility_name": "Zingwangwa Community Hospital"
 -- }

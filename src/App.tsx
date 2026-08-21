@@ -27,6 +27,7 @@ import './App.css';
 
 export default function App() {
   const [session, setSession]           = useState<UserSession | null>(null);
+  const [adminWorkspace, setAdminWorkspace] = useState<'lab' | 'clinical'>('lab');
   const [showLogin, setShowLogin]       = useState(false);
   const [facilityIdInput, setFacilityIdInput] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
@@ -47,18 +48,19 @@ export default function App() {
   const [activeDeptFilter, setActiveDeptFilter] = useState<'All' | 'Molecular' | 'Haematology' | 'Chemistry'>('All');
 
   const [smsDetails, setSmsDetails] = useState<{ to: string; patientName: string; text: string } | null>(null);
+  const activeRole = session?.role === 'admin' ? adminWorkspace : session?.role;
 
   // ── Theme sync ────────────────────────────────────────────────────────────
   useEffect(() => {
     document.body.className = '';
     if (session) {
-      if (session.role === 'lab')           document.body.classList.add('lab-mode');
-      else if (session.role === 'tb')       document.body.classList.add('tb-mode');
+      if (activeRole === 'lab')              document.body.classList.add('lab-mode');
+      else if (activeRole === 'tb')          document.body.classList.add('tb-mode');
       else                                  document.body.classList.add('clinician-mode');
     } else {
       document.body.classList.add('clinician-mode');
     }
-  }, [session]);
+  }, [activeRole, session]);
 
   // ── Data loading ──────────────────────────────────────────────────────────
   const loadRequests = async (userSession: UserSession) => {
@@ -145,10 +147,10 @@ export default function App() {
       else if (activeForm === 'haematology-request') testType = 'Haematology';
       else if (activeForm === 'chemistry-request') testType = 'Chemistry';
 
-      const isAllowed = session.role === 'lab'
-        || (session.role === 'tb' && testType === 'TB')
-        || (session.role === 'hiv' && testType === 'HIV')
-        || (session.role === 'clinician' && (testType === 'Haematology' || testType === 'Chemistry'));
+      const isAllowed = activeRole === 'lab'
+        || (activeRole === 'tb' && testType === 'TB')
+        || (activeRole === 'hiv' && testType === 'HIV')
+        || (activeRole === 'clinician' && (testType === 'Haematology' || testType === 'Chemistry'));
       if (!isAllowed) throw new Error('This test workflow is not available for your assigned role.');
 
       await LimsDbService.createRequest(
@@ -167,20 +169,21 @@ export default function App() {
 
   // ── Lab actions ───────────────────────────────────────────────────────────
   const handleReceiveSample = async (id: string) => {
-    if (!session) return;
+    if (!session || activeRole !== 'lab') return;
     try { setLoading(true); await LimsDbService.updateStatus(id, 'Sample Received'); loadRequests(session); }
     catch (err: any) { alert('Error: ' + err.message); }
     finally { setLoading(false); }
   };
 
   const handleStartTesting = async (id: string) => {
-    if (!session) return;
+    if (!session || activeRole !== 'lab') return;
     try { setLoading(true); await LimsDbService.updateStatus(id, 'Testing'); loadRequests(session); }
     catch (err: any) { alert('Error: ' + err.message); }
     finally { setLoading(false); }
   };
 
   const handleOpenResultsForm = (req: LimsRequest) => {
+    if (activeRole !== 'lab') return;
     setSelectedRequest(req);
     setActiveForm('result-entry');
   };
@@ -203,7 +206,7 @@ export default function App() {
   // ── Derived data filters ──────────────────────────────────────────────────
   const filteredRequests = requests.filter(r => {
     // 1. Department filter
-    if (session?.role === 'lab' && activeDeptFilter !== 'All') {
+    if (activeRole === 'lab' && activeDeptFilter !== 'All') {
       if (r.department !== activeDeptFilter) return false;
     }
 
@@ -226,18 +229,19 @@ export default function App() {
 
   const handleNewRequest = () => {
     if (!session) return;
-    if (session.role === 'tb') setActiveForm('tb-request');
-    else if (session.role === 'hiv') setActiveForm('hiv-request');
+    if (activeRole === 'tb') setActiveForm('tb-request');
+    else if (activeRole === 'hiv') setActiveForm('hiv-request');
     else setShowTestTypeModal(true);
   };
 
-  const roleLabel = session?.role === 'lab' ? 'Laboratory'
-    : session?.role === 'tb' ? 'TB programme'
-    : session?.role === 'hiv' ? 'HIV programme'
+  const roleLabel = session?.role === 'admin' ? `Administrator · ${adminWorkspace === 'lab' ? 'Laboratory' : 'Clinical'}`
+    : activeRole === 'lab' ? 'Laboratory'
+    : activeRole === 'tb' ? 'TB programme'
+    : activeRole === 'hiv' ? 'HIV programme'
     : 'Clinical';
-  const dashboardTitle = session?.role === 'tb' ? 'TB diagnostic workflow'
-    : session?.role === 'hiv' ? 'HIV viral load & EID workflow'
-    : session?.role === 'lab' ? 'Laboratory operations'
+  const dashboardTitle = activeRole === 'tb' ? 'TB diagnostic workflow'
+    : activeRole === 'hiv' ? 'HIV viral load & EID workflow'
+    : activeRole === 'lab' ? 'Laboratory operations'
     : 'Clinical diagnostics';
 
   // ── PUBLIC WEBSITE / LOGIN ─────────────────────────────────────────────────
@@ -278,7 +282,24 @@ export default function App() {
         </div>
 
         <div className="navbar-right">
-          {session.role === 'lab' && (
+          {session.role === 'admin' && (
+            <div className="admin-workspace-switch" aria-label="Administrator workspace">
+              <button
+                className={adminWorkspace === 'lab' ? 'active' : ''}
+                onClick={() => { setAdminWorkspace('lab'); setShowEquipmentHub(false); }}
+              >
+                Lab
+              </button>
+              <button
+                className={adminWorkspace === 'clinical' ? 'active' : ''}
+                onClick={() => { setAdminWorkspace('clinical'); setShowEquipmentHub(false); }}
+              >
+                Clinical
+              </button>
+            </div>
+          )}
+
+          {activeRole === 'lab' && (
             <button
               className="btn-secondary"
               onClick={() => setShowEquipmentHub(!showEquipmentHub)}
@@ -308,7 +329,7 @@ export default function App() {
         {/* Test type picker modal */}
         {showTestTypeModal && (
           <TestTypeModal
-            allowedTypes={session.role === 'clinician' ? ['Haematology', 'Chemistry'] : undefined}
+            allowedTypes={activeRole === 'clinician' ? ['Haematology', 'Chemistry'] : undefined}
             onSelect={(type) => {
               setShowTestTypeModal(false);
               if (type === 'TB') setActiveForm('tb-request');
@@ -353,7 +374,7 @@ export default function App() {
               </div>
 
               <div className="action-grid">
-                {session.role === 'lab' ? (
+                {activeRole === 'lab' ? (
                   <button id="register-case" className="btn-primary" onClick={handleNewRequest}>
                     <Plus size={16} />
                     Register New Case
@@ -361,14 +382,14 @@ export default function App() {
                 ) : (
                   <button id="new-request" className="btn-primary" onClick={handleNewRequest}>
                     <Plus size={16} />
-                    {session.role === 'tb' ? 'Request TB Test' : session.role === 'hiv' ? 'Request HIV VL / EID' : 'Order Diagnostics'}
+                    {activeRole === 'tb' ? 'Request TB Test' : activeRole === 'hiv' ? 'Request HIV VL / EID' : 'Order Diagnostics'}
                   </button>
                 )}
               </div>
             </div>
 
             {/* Equipment Hub View Mode */}
-            {session.role === 'lab' && showEquipmentHub ? (
+            {activeRole === 'lab' && showEquipmentHub ? (
               <LabEquipmentDashboard requests={requests} />
             ) : (
               <>
@@ -405,7 +426,7 @@ export default function App() {
                 </div>
 
                 {/* Department filter tabs (Lab role only) */}
-                {session.role === 'lab' && (
+                {activeRole === 'lab' && (
                   <div className="dept-filter-tabs">
                     {(['All', 'Molecular', 'Haematology', 'Chemistry'] as const).map(tab => (
                       <button
@@ -489,7 +510,7 @@ export default function App() {
                                 {req.status}
                               </span>
 
-                              {session.role === 'lab' ? (
+                              {activeRole === 'lab' ? (
                                 <div className="lab-action-group">
                                   {req.status === 'Pending Sample' && (
                                     <button id={`receive-${req.id}`} className="btn-action-small receive" onClick={() => handleReceiveSample(req.id)}>

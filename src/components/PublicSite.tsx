@@ -182,7 +182,10 @@ export default function PublicSite({
             Hospitals and diagnostic facilities across Malawi are invited to adopt Medicy and move beyond fragmented paper tracking. Afrisoft can support facility onboarding, workflow configuration and staff orientation.
           </p>
         </div>
-        <a className="public-primary-cta light" href="mailto:hello@afrisoft.space?subject=Medicy%20for%20our%20hospital">
+        <a
+          className="public-primary-cta light"
+          href="mailto:ngowelak@gmail.com?subject=Medicy%20for%20our%20hospital&body=Hello%20Afrisoft%2C%0A%0AWe%20would%20like%20to%20learn%20more%20about%20Medicy%20for%20our%20hospital.%0A%0AFacility%20name%3A%0AContact%20name%3A%0APhone%20number%3A%0A%0AThank%20you."
+        >
           Talk to Afrisoft <ArrowRight size={18} />
         </a>
       </section>
